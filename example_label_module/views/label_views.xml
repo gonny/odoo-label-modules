@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Form View -->
+    <record id="view_label_form" model="ir.ui.view">
+        <field name="name">label.label.form</field>
+        <field name="model">label.label</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button name="action_confirm" string="Confirm" type="object"
+                            invisible="state != 'draft'" class="oe_highlight"
+                            groups="base.group_user"/>
+                    <button name="action_print" string="Print" type="object"
+                            invisible="state != 'confirmed'" class="oe_highlight"
+                            groups="base.group_user"/>
+                    <button name="action_reset_to_draft" string="Reset to Draft" type="object"
+                            invisible="state == 'draft'"
+                            groups="base.group_user"/>
+                    <field name="state" widget="statusbar" statusbar_visible="draft,confirmed,printed"/>
+                </header>
+                <sheet>
+                    <div class="oe_button_box" name="button_box">
+                        <button name="toggle_active" type="object" class="oe_stat_button" icon="fa-archive">
+                            <field name="active" widget="boolean_button" options='{"terminology": "archive"}'/>
+                        </button>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="product_id"/>
+                            <field name="barcode"/>
+                        </group>
+                        <group>
+                            <field name="label_type"/>
+                            <field name="size"/>
+                            <field name="quantity"/>
+                            <field name="printed_date" readonly="1"/>
+                        </group>
+                    </group>
+                    <notebook>
+                        <page string="Description">
+                            <field name="description"/>
+                        </page>
+                        <page string="Notes">
+                            <field name="notes"/>
+                        </page>
+                    </notebook>
+                </sheet>
+                <div class="oe_chatter">
+                    <field name="message_follower_ids"/>
+                    <field name="message_ids"/>
+                </div>
+            </form>
+        </field>
+    </record>
+
+    <!-- Tree View -->
+    <record id="view_label_tree" model="ir.ui.view">
+        <field name="name">label.label.tree</field>
+        <field name="model">label.label</field>
+        <field name="arch" type="xml">
+            <tree>
+                <field name="name"/>
+                <field name="product_id"/>
+                <field name="label_type"/>
+                <field name="size"/>
+                <field name="quantity"/>
+                <field name="state" decoration-info="state == 'draft'" 
+                       decoration-success="state == 'printed'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Search View -->
+    <record id="view_label_search" model="ir.ui.view">
+        <field name="name">label.label.search</field>
+        <field name="model">label.label</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="product_id"/>
+                <field name="barcode"/>
+                <separator/>
+                <filter name="filter_draft" string="Draft" domain="[('state', '=', 'draft')]"/>
+                <filter name="filter_confirmed" string="Confirmed" domain="[('state', '=', 'confirmed')]"/>
+                <filter name="filter_printed" string="Printed" domain="[('state', '=', 'printed')]"/>
+                <separator/>
+                <filter name="filter_active" string="Active" domain="[('active', '=', True)]"/>
+                <filter name="filter_archived" string="Archived" domain="[('active', '=', False)]"/>
+                <group expand="0" string="Group By">
+                    <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
+                    <filter name="group_label_type" string="Label Type" context="{'group_by': 'label_type'}"/>
+                    <filter name="group_size" string="Size" context="{'group_by': 'size'}"/>
+                    <filter name="group_product" string="Product" context="{'group_by': 'product_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Kanban View -->
+    <record id="view_label_kanban" model="ir.ui.view">
+        <field name="name">label.label.kanban</field>
+        <field name="model">label.label</field>
+        <field name="arch" type="xml">
+            <kanban>
+                <field name="id"/>
+                <field name="name"/>
+                <field name="product_id"/>
+                <field name="state"/>
+                <templates>
+                    <t t-name="kanban-box">
+                        <div class="oe_kanban_global_click">
+                            <div class="oe_kanban_details">
+                                <strong class="o_kanban_record_title">
+                                    <field name="name"/>
+                                </strong>
+                                <div>
+                                    Product: <field name="product_id"/>
+                                </div>
+                                <div>
+                                    <span class="badge badge-pill">
+                                        <field name="state"/>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </templates>
+            </kanban>
+        </field>
+    </record>
+
+    <!-- Action -->
+    <record id="action_label" model="ir.actions.act_window">
+        <field name="name">Labels</field>
+        <field name="res_model">label.label</field>
+        <field name="view_mode">tree,form,kanban</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Create your first label
+            </p>
+            <p>
+                Create labels for your products to print and track them.
+            </p>
+        </field>
+    </record>
+</odoo>

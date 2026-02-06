@@ -1,0 +1,77 @@
+{
+  "name": "Odoo 19 Python Development",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
+  
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "enableNonRootDocker": "true",
+      "moby": "true"
+    },
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    }
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "dotjoshjohnson.xml",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "jigar-patel.odoosnippets"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.linting.enabled": true,
+        "python.linting.pylintEnabled": true,
+        "python.formatting.provider": "black",
+        "python.analysis.typeCheckingMode": "basic",
+        "python.analysis.autoImportCompletions": true,
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter",
+          "editor.formatOnSave": true,
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "[xml]": {
+          "editor.defaultFormatter": "dotjoshjohnson.xml",
+          "editor.formatOnSave": true
+        },
+        "files.associations": {
+          "*.xml": "xml"
+        },
+        "xml.format.enabled": true,
+        "xml.format.splitAttributes": true
+      }
+    }
+  },
+
+  "postCreateCommand": "pip install --user -r requirements.txt || echo 'No requirements.txt found'",
+  
+  "remoteUser": "vscode",
+  
+  "mounts": [
+    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  ],
+  
+  "runArgs": [
+    "--network=host"
+  ],
+
+  "forwardPorts": [8069, 8072],
+  
+  "portsAttributes": {
+    "8069": {
+      "label": "Odoo Web",
+      "onAutoForward": "notify"
+    },
+    "8072": {
+      "label": "Odoo Longpolling",
+      "onAutoForward": "silent"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Main Menu -->
+    <menuitem id="menu_label_root"
+              name="Labels"
+              sequence="10"
+              web_icon="example_label_module,static/description/icon.png"/>
+
+    <!-- Labels Menu -->
+    <menuitem id="menu_label_labels"
+              name="Labels"
+              parent="menu_label_root"
+              action="action_label"
+              sequence="10"/>
+
+    <!-- Configuration Menu -->
+    <menuitem id="menu_label_configuration"
+              name="Configuration"
+              parent="menu_label_root"
+              sequence="100"/>
+</odoo>
