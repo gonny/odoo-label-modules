@@ -27,6 +27,7 @@ addopts = [
     "--verbose",
     "--strict-markers",
     "--tb=short",
+    "-W", "ignore::DeprecationWarning",
 ]
 
 [tool.coverage.run]

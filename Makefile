@@ -18,7 +18,7 @@ format:  ## Format code with black and isort
 lint:  ## Run linting tools
 	@echo "Running linters..."
 	flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --exclude=.git,__pycache__,.venv,venv
-	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics --exclude=.git,__pycache__,.venv,venv
+	flake8 . --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics --exclude=.git,__pycache__,.venv,venv
 	pylint **/*.py --exit-zero --disable=C,R
 	@echo "✓ Linting complete"
 
