@@ -1,0 +1,20 @@
+# Odoo 19 - Core dependencies will be managed by Odoo itself
+# Development and testing tools
+
+# Code quality
+black>=24.0.0
+pylint>=3.0.0
+flake8>=7.0.0
+isort>=5.13.0
+
+# Testing
+pytest>=8.0.0
+pytest-cov>=4.1.0
+coverage>=7.4.0
+
+# Documentation
+sphinx>=7.2.0
+sphinx-rtd-theme>=2.0.0
+
+# Utilities
+python-dotenv>=1.0.0
