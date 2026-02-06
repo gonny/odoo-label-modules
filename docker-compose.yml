@@ -1,45 +1,50 @@
-version: '3.8'
-
 services:
-  db:
-    image: postgres:16
-    container_name: odoo_db
-    environment:
-      - POSTGRES_DB=postgres
-      - POSTGRES_PASSWORD=odoo
-      - POSTGRES_USER=odoo
-      - PGDATA=/var/lib/postgresql/data/pgdata
-    volumes:
-      - odoo-db-data:/var/lib/postgresql/data/pgdata
-    networks:
-      - odoo_network
-    restart: unless-stopped
-
   odoo:
     image: odoo:19
-    container_name: odoo19
+    container_name: odoo-label
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     ports:
-      - "8069:8069"
-      - "8072:8072"
+      - "${ODOO_PORT:-8069}:8069"
+    volumes:
+      # Tvoje vlastní moduly – LIVE mount z disku
+      - ./addons:/mnt/extra-addons
+      # Konfigurace Odoo
+      - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
+      # Persistentní data (filestore, sessions)
+      - odoo-data:/var/lib/odoo
     environment:
       - HOST=db
-      - USER=odoo
-      - PASSWORD=odoo
-    volumes:
-      - odoo-data:/var/lib/odoo
-      - ./:/mnt/extra-addons
-      - ./config:/etc/odoo
-    networks:
-      - odoo_network
+      - PORT=5432
+      - USER=${POSTGRES_USER:-odoo}
+      - PASSWORD=${POSTGRES_PASSWORD:-odoo}
+    # Dev mode: auto-reload Python + XML hot reload
+    command: ["--dev=reload,xml"]
     restart: unless-stopped
-    command: odoo --dev=all
 
-networks:
-  odoo_network:
-    driver: bridge
+  db:
+    image: postgres:16
+    container_name: odoo-label-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER:-odoo}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-odoo}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - db-data:/var/lib/postgresql/data/pgdata
+    ports:
+      # Pro přímý přístup k DB (debug, pgAdmin)
+      - "${POSTGRES_PORT:-5433}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
 volumes:
-  odoo-db-data:
   odoo-data:
+    name: odoo-label-data
+  db-data:
+    name: odoo-label-db

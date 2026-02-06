@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ============ FORMULÁŘ ============ -->
+  <record id="label_production_tier_view_form" model="ir.ui.view">
+    <field name="name">label.production.tier.form</field>
+    <field name="model">label.production.tier</field>
+    <field name="arch" type="xml">
+      <form string="Hladina výroby">
+        <sheet>
+          <group>
+            <group string="Hladina">
+              <field name="name"/>
+              <field name="min_quantity"/>
+              <field name="max_quantity"/>
+            </group>
+            <group string="Výrobní parametry">
+              <field name="pieces_per_hour"/>
+              <field name="waste_test_pieces"/>
+            </group>
+          </group>
+          <field name="notes" placeholder="Poznámky k hladině..."/>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ============ SEZNAM ============ -->
+  <record id="label_production_tier_view_list" model="ir.ui.view">
+    <field name="name">label.production.tier.list</field>
+    <field name="model">label.production.tier</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="name"/>
+        <field name="min_quantity"/>
+        <field name="max_quantity"/>
+        <field name="pieces_per_hour" decoration-bf="1"/>
+        <field name="waste_test_pieces"/>
+      </list>
+    </field>
+  </record>
+
+  <!-- ============ AKCE ============ -->
+  <record id="label_production_tier_action" model="ir.actions.act_window">
+    <field name="name">Množstevní hladiny</field>
+    <field name="res_model">label.production.tier</field>
+    <field name="view_mode">list,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+                Přidej první hladinu
+      </p>
+      <p>
+                Hladiny určují výrobní rychlost a testovací odpad
+                dle množství kusů v zakázce.
+      </p>
+    </field>
+  </record>
+
+</odoo>

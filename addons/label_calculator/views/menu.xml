@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ============ HLAVNÍ MENU ============ -->
+  <menuitem id="label_menu_root" name="Štítky" sequence="100" web_icon="label_calculator,static/description/icon.png"/>
+
+  <!-- ============ KONFIGURACE ============ -->
+  <menuitem id="label_menu_config" name="Konfigurace" parent="label_menu_root" sequence="90"/>
+
+  <menuitem id="label_menu_materials" name="Materiály" parent="label_menu_config" action="label_material_action" sequence="10"/>
+
+  <menuitem id="label_menu_machines" name="Stroje" parent="label_menu_config" action="label_machine_action" sequence="20"/>
+
+  <menuitem id="label_menu_tiers" name="Množstevní hladiny" parent="label_menu_config" action="label_production_tier_action" sequence="30"/>
+
+</odoo>

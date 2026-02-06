@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ============ FORMULÁŘ ============ -->
+  <record id="label_machine_view_form" model="ir.ui.view">
+    <field name="name">label.machine.form</field>
+    <field name="model">label.machine</field>
+    <field name="arch" type="xml">
+      <form string="Stroj">
+        <sheet>
+          <div class="oe_title">
+            <h1>
+              <field name="name" placeholder="Název stroje"/>
+            </h1>
+          </div>
+
+          <group>
+            <group string="Pořízení">
+              <field name="purchase_price"/>
+              <field name="lifetime_years"/>
+              <field name="hours_per_year"/>
+            </group>
+            <group string="Vypočtená amortizace">
+              <field name="total_lifetime_hours" readonly="1"/>
+              <field name="hourly_amortization" readonly="1"/>
+            </group>
+          </group>
+
+          <notebook>
+            <page string="Poznámky">
+              <field name="notes" placeholder="Údržba, servisní intervaly..."/>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ============ SEZNAM ============ -->
+  <record id="label_machine_view_list" model="ir.ui.view">
+    <field name="name">label.machine.list</field>
+    <field name="model">label.machine</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="name"/>
+        <field name="purchase_price"/>
+        <field name="lifetime_years"/>
+        <field name="hours_per_year"/>
+        <field name="hourly_amortization" decoration-bf="1"/>
+      </list>
+    </field>
+  </record>
+
+  <!-- ============ AKCE ============ -->
+  <record id="label_machine_action" model="ir.actions.act_window">
+    <field name="name">Stroje</field>
+    <field name="res_model">label.machine</field>
+    <field name="view_mode">list,form</field>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+                Přidej první stroj
+      </p>
+      <p>
+                Amortizace stroje se automaticky rozpočítá do ceny výrobku.
+      </p>
+    </field>
+  </record>
+
+</odoo>

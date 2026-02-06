@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="res_config_settings_view_form_label" model="ir.ui.view">
+    <field name="name">res.config.settings.view.form.label</field>
+    <field name="model">res.config.settings</field>
+    <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//form" position="inside">
+        <app data-string="Label Calculator" string="Label Calculator" data-key="label_calculator">
+
+          <block title="Práce" name="label_work">
+            <setting string="Hodinová sazba" help="Tvoje požadovaná hodinová sazba (hrubá)">
+              <div class="content-group">
+                <div class="row mt16">
+                  <label for="label_hourly_rate" class="col-lg-3 o_light_label"/>
+                  <field name="label_hourly_rate"/>
+                  <span class="ms-1">Kč/hod</span>
+                </div>
+              </div>
+            </setting>
+            <setting string="Admin overhead" help="Čas na komunikaci, fakturaci, balení, poštu – rozpočítá se do ceny">
+              <div class="content-group">
+                <div class="row mt16">
+                  <label for="label_admin_overhead_minutes" class="col-lg-3 o_light_label"/>
+                  <field name="label_admin_overhead_minutes"/>
+                  <span class="ms-1">minut na zakázku</span>
+                </div>
+              </div>
+            </setting>
+          </block>
+
+          <block title="Marže a přirážky" name="label_margins">
+            <setting string="DPH přirážka" help="Neplátce DPH – přirážka za nákup s DPH">
+              <div class="content-group">
+                <div class="row mt16">
+                  <label for="label_vat_surcharge_pct" class="col-lg-3 o_light_label"/>
+                  <field name="label_vat_surcharge_pct"/>
+                  <span class="ms-1">%</span>
+                </div>
+              </div>
+            </setting>
+            <setting string="Marže na materiál" help="Procentuální přirážka na materiálové náklady">
+              <div class="content-group">
+                <div class="row mt16">
+                  <label for="label_material_margin_pct" class="col-lg-3 o_light_label"/>
+                  <field name="label_material_margin_pct"/>
+                  <span class="ms-1">%</span>
+                </div>
+              </div>
+            </setting>
+            <setting string="Minimální cena zakázky" help="Pod touto cenou se zakázka nevyplatí">
+              <div class="content-group">
+                <div class="row mt16">
+                  <label for="label_min_order_price" class="col-lg-3 o_light_label"/>
+                  <field name="label_min_order_price"/>
+                  <span class="ms-1">Kč</span>
+                </div>
+              </div>
+            </setting>
+          </block>
+
+        </app>
+      </xpath>
+    </field>
+  </record>
+
+</odoo>

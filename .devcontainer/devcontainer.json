@@ -1,18 +1,16 @@
 {
   "name": "Odoo 19 Python Development",
-  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bullseye",
-  
+  "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
   "features": {
-    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+    "ghcr.io/devcontainers/features/git:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/docker-in-docker": {
       "version": "latest",
       "enableNonRootDocker": "true",
       "moby": "true"
     },
-    "ghcr.io/devcontainers/features/git:1": {
-      "version": "latest"
-    }
   },
-
   "customizations": {
     "vscode": {
       "extensions": [
@@ -49,21 +47,18 @@
       }
     }
   },
-
-  "postCreateCommand": "pip install --user -r requirements.txt || echo 'No requirements.txt found'",
-  
+  "postCreateCommand": "pip install --upgrade pip && pip install --user -r requirements.txt || echo 'No odoo/requirements.txt found'",
   "remoteUser": "vscode",
-  
-  "mounts": [
-    "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
-  ],
-  
+  // "mounts": [
+  //   "source=/var/run/docker.sock,target=/var/run/docker.sock,type=bind"
+  // ],
   "runArgs": [
     "--network=host"
   ],
-
-  "forwardPorts": [8069, 8072],
-  
+  "forwardPorts": [
+    8069,
+    8072
+  ],
   "portsAttributes": {
     "8069": {
       "label": "Odoo Web",
