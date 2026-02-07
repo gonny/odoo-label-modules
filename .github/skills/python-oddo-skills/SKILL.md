@@ -1,5 +1,8 @@
-# Python Odoo Development Skills
+---
+name: python-oddo-skills
+description: Key skills and patterns for developing Odoo 19 modules in Python.
 
+---
 This document outlines key skills and patterns for developing Odoo 19 modules.
 
 ## 1. Module Scaffolding
