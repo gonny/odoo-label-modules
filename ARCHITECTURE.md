@@ -165,39 +165,39 @@ odoo-label-modules/
 
 > Hlavní kalkulační modul – srdce celého systému
 
-- [ ] **Story 1.2.1: Model `label.material` – Materiály**
-  - [ ] Definovat model (name, material_type, color, color_hex)
-  - [ ] Pole pro plošný materiál (price_per_m2, thickness_mm)
-  - [ ] Pole pro stuhu (width_mm, price_per_meter)
-  - [ ] Pole pro TTR pásku (ttr_length_m, ttr_width_mm, ttr_price_per_roll)
-  - [ ] Pole pro komponenty (component_price)
-  - [ ] Computed pole: price_per_mm2, price_per_mm_length
-  - [ ] Výrobní poznámky (laser_power_pct, laser_speed, production_notes)
-  - [ ] Formulářový view (dynamické zobrazení dle typu)
-  - [ ] Seznamový view
-  - [ ] Přístupová práva (security/ir.model.access.csv)
-  - [ ] Naplnit daty: 6 typů × ~50 barev
+- [x] **Story 1.2.1: Model `label.material` – Materiály**
+  - [x] Definovat model (name, material_type, color, color_hex)
+  - [x] Pole pro plošný materiál (price_per_m2, thickness_mm)
+  - [x] Pole pro stuhu (width_mm, price_per_meter)
+  - [x] Pole pro TTR pásku (ttr_length_m, ttr_width_mm, ttr_price_per_roll)
+  - [x] Pole pro komponenty (component_price)
+  - [x] Computed pole: price_per_mm2, price_per_mm_length
+  - [x] Výrobní poznámky (laser_power_pct, laser_speed, production_notes)
+  - [x] Formulářový view (dynamické zobrazení dle typu)
+  - [x] Seznamový view
+  - [x] Přístupová práva (security/ir.model.access.csv)
+  - [x] Naplnit daty: 6 typů × ~50 barev
 
-- [ ] **Story 1.2.2: Model `label.machine` – Stroje**
-  - [ ] Definovat model (name, purchase_price, lifetime_years, hours_per_year)
-  - [ ] Computed pole: hourly_amortization
-  - [ ] Formulářový a seznamový view
-  - [ ] Přístupová práva
-  - [ ] Naplnit daty (laser, tiskárna etiket)
+- [x] **Story 1.2.2: Model `label.machine` – Stroje**
+  - [x] Definovat model (name, purchase_price, lifetime_years, hours_per_year)
+  - [x] Computed pole: hourly_amortization
+  - [x] Formulářový a seznamový view
+  - [x] Přístupová práva
+  - [x] Naplnit daty (laser, tiskárna etiket)
 
-- [ ] **Story 1.2.3: Model `label.production.tier` – Hladiny**
-  - [ ] Definovat model (name, min_quantity, max_quantity, pieces_per_hour, waste_test_pieces)
-  - [ ] Formulářový a seznamový view
-  - [ ] Přístupová práva
-  - [ ] Naplnit výchozími daty (4 hladiny)
+- [x] **Story 1.2.3: Model `label.production.tier` – Hladiny**
+  - [x] Definovat model (name, min_quantity, max_quantity, pieces_per_hour, waste_test_pieces)
+  - [x] Formulářový a seznamový view
+  - [x] Přístupová práva
+  - [x] Naplnit výchozími daty (4 hladiny)
 
-- [ ] **Story 1.2.4: Globální nastavení (res.config.settings)**
-  - [ ] Hodinová sazba (hourly_rate)
-  - [ ] Admin overhead na zakázku (admin_overhead_minutes)
-  - [ ] DPH přirážka % (vat_surcharge_pct)
-  - [ ] Marže na materiál % (material_margin_pct)
-  - [ ] Minimální cena zakázky (min_order_price)
-  - [ ] View v Nastavení
+- [x] **Story 1.2.4: Globální nastavení (res.config.settings)**
+  - [x] Hodinová sazba (hourly_rate)
+  - [x] Admin overhead na zakázku (admin_overhead_minutes)
+  - [x] DPH přirážka % (vat_surcharge_pct)
+  - [x] Marže na materiál % (material_margin_pct)
+  - [x] Minimální cena zakázky (min_order_price)
+  - [x] View v Nastavení
 
 - [ ] **Story 1.2.5: Rozšíření `product.template` – Typ cenotvorby**
   - [ ] Přidat pole pricing_type: 'fixed' / 'calculator'

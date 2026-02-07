@@ -2,61 +2,52 @@
 <odoo>
 
   <record id="res_config_settings_view_form_label" model="ir.ui.view">
-    <field name="name">res.config.settings.view.form.label</field>
+    <field name="name">res.config.settings.view.form.inherit.label</field>
     <field name="model">res.config.settings</field>
     <field name="inherit_id" ref="base.res_config_settings_view_form"/>
     <field name="arch" type="xml">
       <xpath expr="//form" position="inside">
-        <app data-string="Label Calculator" string="Label Calculator" data-key="label_calculator">
+        <app data-string="Label Calculator" string="Kalkulačka štítků" name="label_calculator" groups="base.group_system">
 
-          <block title="Práce" name="label_work">
-            <setting string="Hodinová sazba" help="Tvoje požadovaná hodinová sazba (hrubá)">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_hourly_rate" class="col-lg-3 o_light_label"/>
-                  <field name="label_hourly_rate"/>
-                  <span class="ms-1">Kč/hod</span>
-                </div>
-              </div>
+          <block title="Práce" name="label_work_settings">
+            <setting id="label_hourly_rate_setting" string="Hodinová sazba" help="Tvoje požadovaná hodinová sazba za práci (bez fixních nákladů)">
+              <field name="label_hourly_rate"/>
             </setting>
-            <setting string="Admin overhead" help="Čas na komunikaci, fakturaci, balení, poštu – rozpočítá se do ceny">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_admin_overhead_minutes" class="col-lg-3 o_light_label"/>
-                  <field name="label_admin_overhead_minutes"/>
-                  <span class="ms-1">minut na zakázku</span>
-                </div>
-              </div>
+            <setting id="label_admin_overhead_setting" string="Admin overhead na zakázku" help="Komunikace se zákazníkem, fakturace, balení, cesta na poštu (v minutách)">
+              <field name="label_admin_overhead_minutes"/>
             </setting>
           </block>
 
-          <block title="Marže a přirážky" name="label_margins">
-            <setting string="DPH přirážka" help="Neplátce DPH – přirážka za nákup s DPH">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_vat_surcharge_pct" class="col-lg-3 o_light_label"/>
-                  <field name="label_vat_surcharge_pct"/>
-                  <span class="ms-1">%</span>
-                </div>
-              </div>
+          <block title="Fixní náklady (prostor a provoz)" name="label_fixed_costs_settings">
+            <setting id="label_rent_setting" string="Pronájem" help="Roční náklad na pronájem dílny/kanceláře">
+              <field name="label_fixed_rent_yearly"/>
             </setting>
-            <setting string="Marže na materiál" help="Procentuální přirážka na materiálové náklady">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_material_margin_pct" class="col-lg-3 o_light_label"/>
-                  <field name="label_material_margin_pct"/>
-                  <span class="ms-1">%</span>
-                </div>
-              </div>
+            <setting id="label_energy_setting" string="Elektřina" help="Roční náklad na elektřinu">
+              <field name="label_fixed_energy_yearly"/>
             </setting>
-            <setting string="Minimální cena zakázky" help="Pod touto cenou se zakázka nevyplatí">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_min_order_price" class="col-lg-3 o_light_label"/>
-                  <field name="label_min_order_price"/>
-                  <span class="ms-1">Kč</span>
-                </div>
-              </div>
+            <setting id="label_other_fixed_setting" string="Ostatní provozní náklady" help="Topení, voda, internet, pojištění... (za rok)">
+              <field name="label_fixed_other_yearly"/>
+            </setting>
+            <setting id="label_working_hours_setting" string="Pracovních hodin za rok" help="Pro rozpočítání fixních nákladů do hodinové sazby. Typicky 250 dní × 8 hod = 2000">
+              <field name="label_working_hours_yearly"/>
+            </setting>
+          </block>
+
+          <block title="Marže a přirážky" name="label_margins_settings">
+            <setting id="label_vat_setting" string="DPH přirážka (neplátce)" help="Přirážka za to, že nakupuješ s DPH ale nemůžeš si ji odečíst">
+              <field name="label_vat_surcharge_pct"/>
+            </setting>
+            <setting id="label_margin_setting" string="Výchozí marže na materiál" help="Použije se jako fallback, pokud tier ani skupina materiálů nemají vlastní marži">
+              <field name="label_default_material_margin_pct"/>
+            </setting>
+          </block>
+
+          <block title="Minima (varování, ne blocker)" name="label_minimums_settings">
+            <setting id="label_min_price_setting" string="Minimální cena zakázky" help="Pod touto cenou se zobrazí varování – ale objednávku LZE vytvořit">
+              <field name="label_min_order_price"/>
+            </setting>
+            <setting id="label_min_qty_setting" string="Minimální objednávané množství" help="Pod tímto množstvím se zobrazí varování – ale objednávku LZE vytvořit">
+              <field name="label_min_order_quantity"/>
             </setting>
           </block>
 
