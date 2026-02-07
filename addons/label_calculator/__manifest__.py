@@ -10,8 +10,8 @@
         - Amortizace strojů
         - Konfigurovatelných marží a přirážek
     """,
-    "author": "TVOJE JMENO",
-    "website": "https://tvojestranka.cz",
+    "author": "Jan Šnobl",
+    "website": "https://etiketou.cz",
     "license": "LGPL-3",
     "depends": [
         "base",
@@ -19,8 +19,8 @@
         "sale_management",
     ],
     "data": [
-        # Pořadí je důležité!
         "security/ir.model.access.csv",
+        "views/label_material_group_views.xml",
         "views/label_material_views.xml",
         "views/label_machine_views.xml",
         "views/label_production_tier_views.xml",

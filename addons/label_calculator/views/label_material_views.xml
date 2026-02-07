@@ -62,7 +62,7 @@
     </field>
   </record>
 
-  <!-- ============ SEZNAM (list, NE tree!) ============ -->
+  <!-- ============ SEZNAM ============ -->
   <record id="label_material_view_list" model="ir.ui.view">
     <field name="name">label.material.list</field>
     <field name="model">label.material</field>
@@ -80,7 +80,7 @@
     </field>
   </record>
 
-  <!-- ============ VYHLEDÁVÁNÍ ============ -->
+  <!-- ============ VYHLEDÁVÁNÍ – minimální verze ============ -->
   <record id="label_material_view_search" model="ir.ui.view">
     <field name="name">label.material.search</field>
     <field name="model">label.material</field>
@@ -88,13 +88,7 @@
       <search>
         <field name="name"/>
         <field name="color_name"/>
-        <filter name="filter_sheet" string="Plošný" domain="[('material_type', '=', 'sheet')]"/>
-        <filter name="filter_ribbon" string="Stuha" domain="[('material_type', '=', 'ribbon')]"/>
-        <filter name="filter_ttr" string="TTR" domain="[('material_type', '=', 'ttr')]"/>
-        <filter name="filter_component" string="Komponenty" domain="[('material_type', '=', 'component')]"/>
-        <group expand="0" string="Seskupit dle">
-          <filter name="group_type" string="Typ materiálu" context="{'group_by': 'material_type'}"/>
-        </group>
+        <field name="material_type"/>
       </search>
     </field>
   </record>
