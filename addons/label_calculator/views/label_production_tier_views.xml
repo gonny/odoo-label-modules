@@ -28,7 +28,25 @@
               <field name="waste_pruning_percentage"/>
             </group>
           </group>
-          <field name="notes" placeholder="Poznámky..."/>
+
+          <notebook>
+            <page string="Přetížení pro materiály" name="overrides">
+              <div class="alert alert-info" role="alert" invisible="override_count > 0">
+                                Žádné přetížení – všechny materiály v této skupině
+                                používají standardní výkon <field name="pieces_per_hour" readonly="1"/>
+ ks/hod.
+              </div>
+              <field name="override_ids">
+                <list editable="bottom">
+                  <field name="material_id" domain="[('group_id', '=', parent.group_id)]"/>
+                  <field name="pieces_per_hour_override"/>
+                </list>
+              </field>
+            </page>
+            <page string="Poznámky">
+              <field name="notes" placeholder="Poznámky k této hladině..."/>
+            </page>
+          </notebook>
         </sheet>
       </form>
     </field>
@@ -45,9 +63,11 @@
         <field name="max_quantity"/>
         <field name="pieces_per_hour" decoration-bf="1"/>
         <field name="margin_pct"/>
-        <field name="waste_test_pieces"/>
+        <field name="waste_test_pieces" optional="hide"/>
         <field name="waste_test_percentage"/>
         <field name="waste_pruning_percentage"/>
+        <field name="override_count" decoration-warning="override_count > 0" decoration-bf="override_count > 0"/>
+        <field name="override_summary" optional="show"/>
       </list>
     </field>
   </record>

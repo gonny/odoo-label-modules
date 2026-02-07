@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import models, fields, api
 
 
 class LabelProductionTier(models.Model):
@@ -53,3 +53,31 @@ class LabelProductionTier(models.Model):
     )
 
     notes = fields.Text(string="Poznámky")
+
+    # === Nové: přehled overrides ===
+    override_ids = fields.One2many(
+        "label.material.tier.override",
+        "tier_id",
+        string="Přetížení",
+    )
+    override_count = fields.Integer(
+        string="Přetížení",
+        compute="_compute_override_count",
+    )
+    override_summary = fields.Char(
+        string="Přetížené materiály",
+        compute="_compute_override_count",
+    )
+
+    @api.depends("override_ids")
+    def _compute_override_count(self):
+        for tier in self:
+            overrides = tier.override_ids
+            tier.override_count = len(overrides)
+            if overrides:
+                names = overrides.mapped(
+                    lambda o: f"{o.material_id.color_name or o.material_id.name} → {o.pieces_per_hour_override:.0f}/hod"
+                )
+                tier.override_summary = ", ".join(names)
+            else:
+                tier.override_summary = ""
