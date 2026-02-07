@@ -25,6 +25,8 @@
         "views/label_machine_views.xml",
         "views/label_production_tier_views.xml",
         "views/res_config_settings_views.xml",
+        "views/product_template_views.xml",
+        "views/sale_order_line_views.xml",
         "views/menu.xml",
         "data/default_data.xml",
     ],

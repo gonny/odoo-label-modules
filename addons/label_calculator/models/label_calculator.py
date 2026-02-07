@@ -148,9 +148,17 @@ class LabelCalculator(models.AbstractModel):
         # === VAROVÁNÍ ===
         warnings = self._check_warnings(config, quantity, total_price)
 
+        # Materiálový náklad (bez marže, bez práce)
+        material_cost_only = main_result.get("material_cost_raw", 0)
+        machine_cost_only = main_result.get("machine_cost", 0)
+        for addon in addon_results:
+            material_cost_only += addon.get("material_cost", 0)
+            machine_cost_only += addon.get("machine_cost", 0)
+
         return {
             "unit_price": round(unit_price, 2),
             "total_price": round(total_price, 2),
+            "material_cost_only": round(material_cost_only + machine_cost_only, 4),
             "quantity": quantity,
             "tier_name": tier.name,
             "margin_pct": margin_pct,
@@ -172,8 +180,6 @@ class LabelCalculator(models.AbstractModel):
         is_repeat_design, pcs_per_hour,
         effective_hourly, margin_pct,
     ):
-        """Plná kalkulace: materiál + práce + admin + amortizace."""
-
         # 1. Materiálové náklady
         mat_cost = self._calc_material_cost(
             material=material,
@@ -185,12 +191,25 @@ class LabelCalculator(models.AbstractModel):
             margin_pct=margin_pct,
         )
 
-        # 2. Práce (hodinová sazba ÷ výkon)
+        # 1b. Materiálové náklady BEZ marže (pro "náklad na materiál")
+        mat_cost_raw = self._calc_material_cost_raw(
+            material=material,
+            tier=tier,
+            config=config,
+            width_mm=width_mm,
+            height_mm=height_mm,
+            is_repeat_design=is_repeat_design,
+        )
+
+        # 2. Práce
         labor_cost = effective_hourly / pcs_per_hour if pcs_per_hour else 0
 
-        # 3. Admin overhead (rozpočítaný na kusy)
-        admin_minutes = float(config.get("admin_overhead_minutes", 15))
-        admin_cost = (admin_minutes / 60) * effective_hourly / quantity
+        # 3. Admin overhead (jen pokud je zapnutý)
+        admin_enabled = config.get("admin_overhead_enabled", "False")
+        admin_cost = 0
+        if admin_enabled == "True" and quantity:
+            admin_minutes = float(config.get("admin_overhead_minutes", 15))
+            admin_cost = (admin_minutes / 60) * effective_hourly / quantity
 
         # 4. Amortizace stroje
         machine_cost = 0
@@ -203,6 +222,7 @@ class LabelCalculator(models.AbstractModel):
             "material_name": material.display_name,
             "type": "main",
             "material_cost": round(mat_cost, 6),
+            "material_cost_raw": round(mat_cost_raw, 6),
             "labor_cost": round(labor_cost, 4),
             "admin_cost": round(admin_cost, 4),
             "machine_cost": round(machine_cost, 4),
@@ -210,6 +230,29 @@ class LabelCalculator(models.AbstractModel):
             "pcs_per_hour": pcs_per_hour,
             "subtotal": round(subtotal, 4),
         }
+
+    def _calc_material_cost_raw(
+        self, material, tier, config,
+        width_mm, height_mm, is_repeat_design,
+    ):
+        """Materiálové náklady BEZ marže – čistý náklad."""
+        unit_cost = material.get_unit_cost(
+            width_mm=width_mm,
+            height_mm=height_mm,
+        )
+        if not unit_cost:
+            return 0
+
+        waste_multiplier = self._get_waste_multiplier(
+            tier=tier,
+            is_repeat_design=is_repeat_design,
+        )
+        cost_with_waste = unit_cost * waste_multiplier
+
+        vat_pct = float(config.get("vat_surcharge_pct", 21))
+        cost_with_vat = cost_with_waste * (1 + vat_pct / 100)
+
+        return cost_with_vat
 
     # ------------------------------------------------------------------
     # Kalkulace příplatkového materiálu (is_addon=True)
@@ -370,6 +413,9 @@ class LabelCalculator(models.AbstractModel):
         ICP = self.env["ir.config_parameter"].sudo()
         return {
             "hourly_rate": ICP.get_param("label_calc.hourly_rate", "800"),
+            "admin_overhead_enabled": ICP.get_param(
+                "label_calc.admin_overhead_enabled", "False"
+            ),
             "admin_overhead_minutes": ICP.get_param(
                 "label_calc.admin_overhead_minutes", "15"
             ),
