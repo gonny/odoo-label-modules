@@ -61,7 +61,7 @@ class LabelProductionTier(models.Model):
         string="Přetížení",
     )
     override_count = fields.Integer(
-        string="Přetížení",
+        string="Počet přetížení",
         compute="_compute_override_count",
     )
     override_summary = fields.Char(
