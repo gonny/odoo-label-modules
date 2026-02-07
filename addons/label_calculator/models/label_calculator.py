@@ -55,6 +55,24 @@ class LabelCalculator(models.AbstractModel):
         if not material.exists():
             return self._error_result("Materiál nenalezen")
 
+        try:
+            quantity_value = float(quantity)
+            width_value = float(width_mm or 0)
+            height_value = float(height_mm or 0)
+        except (TypeError, ValueError):
+            return self._error_result("Neplatné číselné hodnoty")
+
+        if quantity_value <= 0:
+            return self._error_result("Množství musí být větší než 0")
+
+        if material.material_type == "area" and (
+            width_value <= 0 or height_value <= 0
+        ):
+            return self._error_result("Rozměry štítku musí být větší než 0")
+
+        if material.material_type == "length" and height_value <= 0:
+            return self._error_result("Výška/délka etikety musí být větší než 0")
+
         group = material.group_id
         if not group:
             return self._error_result("Materiál nemá přiřazenou skupinu")

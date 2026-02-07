@@ -4,6 +4,7 @@ from odoo.tests.common import TransactionCase
 
 _logger = logging.getLogger(__name__)
 
+
 class TestLabelCalculator(TransactionCase):
 
     @classmethod
@@ -153,6 +154,22 @@ class TestLabelCalculator(TransactionCase):
             "name": "Nýt mosazný",
             "group_id": cls.group_comp.id,
             "component_price": 1.20,
+        })
+
+        # Skupina: Časový příplatek (time, addon)
+        cls.group_press = cls.env["label.material.group"].create({
+            "name": "Heat Press",
+            "material_type": "time",
+            "is_addon": True,
+            "default_margin_pct": 20,
+            "machine_id": cls.laser.id,
+        })
+
+        cls.mat_press_10s = cls.env["label.material"].create({
+            "name": "Press 10s",
+            "group_id": cls.group_press.id,
+            "time_seconds": 10,
+            "time_multiplier": 1,
         })
 
         cls.calc = cls.env["label.calculator"]
@@ -367,3 +384,64 @@ class TestLabelCalculator(TransactionCase):
             "TEST 08: S override (800/hod) = %.2f Kč/ks",
             result["unit_price"],
         )
+
+    def test_09_time_addon(self):
+        """Časový příplatek (heat press) – addon typu time."""
+        result = self.calc.compute_price(
+            material_id=self.mat_alu_black.id,
+            width_mm=30,
+            height_mm=40,
+            quantity=500,
+            addon_material_ids=[self.mat_press_10s.id],
+        )
+
+        self.assertGreater(result["unit_price"], 0)
+        self.assertEqual(len(result["breakdown"]["addons"]), 1)
+
+        addon = result["breakdown"]["addons"][0]
+        self.assertEqual(addon["type"], "addon_time")
+        self.assertGreater(addon["machine_cost"], 0)
+        self.assertEqual(addon["material_cost"], 0)
+
+    def test_10_min_price_warning(self):
+        """Varování na minimální cenu zakázky."""
+        ICP = self.env["ir.config_parameter"].sudo()
+        old_min = ICP.get_param("label_calc.min_order_price", "250")
+        try:
+            ICP.set_param("label_calc.min_order_price", "10000")
+            result = self.calc.compute_price(
+                material_id=self.mat_alu_black.id,
+                width_mm=30,
+                height_mm=40,
+                quantity=500,
+            )
+            price_warnings = [w for w in result["warnings"] if w["type"] == "price"]
+            self.assertTrue(price_warnings)
+        finally:
+            ICP.set_param("label_calc.min_order_price", old_min)
+
+    def test_11_invalid_quantity(self):
+        """Množství musí být větší než 0."""
+        result = self.calc.compute_price(
+            material_id=self.mat_alu_black.id,
+            width_mm=30,
+            height_mm=40,
+            quantity=0,
+        )
+
+        self.assertEqual(result["unit_price"], 0)
+        self.assertTrue(result["warnings"])
+        self.assertEqual(result["warnings"][0]["type"], "error")
+
+    def test_12_invalid_dimensions(self):
+        """Rozměry musí být kladné pro plošný materiál."""
+        result = self.calc.compute_price(
+            material_id=self.mat_alu_black.id,
+            width_mm=0,
+            height_mm=40,
+            quantity=100,
+        )
+
+        self.assertEqual(result["unit_price"], 0)
+        self.assertTrue(result["warnings"])
+        self.assertEqual(result["warnings"][0]["type"], "error")
