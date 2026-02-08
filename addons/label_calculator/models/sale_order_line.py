@@ -64,6 +64,12 @@ class SaleOrderLine(models.Model):
         readonly=True,
     )
 
+    label_material_cost_only = fields.Float(
+        string="Náklad materiálu/ks",
+        digits=(12, 4),
+        readonly=True,
+    )
+
     label_price_breakdown = fields.Text(
         string="Rozpad ceny",
         readonly=True,
@@ -79,13 +85,50 @@ class SaleOrderLine(models.Model):
         readonly=True,
     )
 
-    label_material_cost_only = fields.Float(
-        string="Náklad materiálu/ks",
-        digits=(12, 4),
-        readonly=True,
-        help="Čistý náklad na materiál jednoho štítku (bez práce a marže). "
-             "Pod touto cenou dotujete materiál.",
-    )
+    # === CRUD: přepočítat breakdown při uložení ===
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        lines = super().create(vals_list)
+        for line in lines:
+            if line.pricing_type == "calculator" and line.label_material_id:
+                line._recompute_label_fields()
+        return lines
+
+    def write(self, vals):
+        res = super().write(vals)
+        trigger_fields = {
+            "label_material_id", "label_width_mm", "label_height_mm",
+            "product_uom_qty", "label_is_repeat_design",
+            "label_ttr_material_id", "label_addon_ids",
+            "product_template_id",
+        }
+        if trigger_fields & set(vals.keys()):
+            for line in self:
+                if line.pricing_type == "calculator" and line.label_material_id:
+                    line._recompute_label_fields()
+        return res
+
+    def _recompute_label_fields(self):
+        """Přepočítá kalkulační pole a uloží do DB."""
+        self.ensure_one()
+        result = self._run_calculation()
+        if not result or not result.get("breakdown"):
+            return
+
+        vals = {
+            "label_calculated_price": result["unit_price"],
+            "label_material_cost_only": result.get("material_cost_only", 0),
+            "label_price_breakdown": self._format_breakdown(result),
+            "price_unit": result["unit_price"],
+        }
+
+        desc = self._get_label_description()
+        if desc:
+            vals["name"] = desc
+
+        # Přímý SQL update aby se vyhnul rekurzi
+        super(SaleOrderLine, self).write(vals)
 
     # === Onchange: výběr produktu ===
 
@@ -104,8 +147,6 @@ class SaleOrderLine(models.Model):
             self.label_is_repeat_design = False
             self.label_calculated_price = 0
             self.label_price_breakdown = ""
-            self.label_last_price = 0
-            self.label_last_order_ref = ""
             self.label_material_cost_only = 0
         else:
             self.label_material_id = False
@@ -117,6 +158,7 @@ class SaleOrderLine(models.Model):
             self.label_calculated_price = 0
             self.label_price_breakdown = ""
             self.label_material_cost_only = 0
+
     # === Onchange: výběr materiálu ===
 
     @api.onchange("label_material_id")
@@ -147,25 +189,27 @@ class SaleOrderLine(models.Model):
         if not self.label_material_id:
             self.label_calculated_price = 0
             self.label_price_breakdown = ""
+            self.label_material_cost_only = 0
             return
         if not self.label_height_mm or not self.product_uom_qty:
             return
 
         result = self._run_calculation()
-        self.label_material_cost_only = result.get("material_cost_only", 0)
         if not result:
             return
 
         self.label_calculated_price = result["unit_price"]
         self.price_unit = result["unit_price"]
+        self.label_material_cost_only = result.get("material_cost_only", 0)
         self.label_price_breakdown = self._format_breakdown(result)
 
         desc = self._get_label_description()
         if desc:
             self.name = desc
 
+    # === Pomocné metody ===
+
     def _run_calculation(self):
-        """Spustí kalkulaci a vrátí výsledek."""
         addon_ids = []
         if self.label_ttr_material_id:
             addon_ids.append(self.label_ttr_material_id.id)
@@ -183,41 +227,62 @@ class SaleOrderLine(models.Model):
         )
 
     def _format_breakdown(self, result):
-        """Formátuje rozpad ceny."""
         bd = result.get("breakdown", {})
         main = bd.get("main", {})
         lines = []
 
         mat_cost = main.get("material_cost", 0)
+        mat_cost_raw = main.get("material_cost_raw", 0)
         labor_cost = main.get("labor_cost", 0)
         admin_cost = main.get("admin_cost", 0)
         machine_cost = main.get("machine_cost", 0)
         pcs_per_hour = main.get("pcs_per_hour", 0)
         machine_name = main.get("machine_name", "")
 
-        lines.append(f"Materiál: {mat_cost:.4f} Kč")
-        lines.append(f"Práce: {labor_cost:.4f} Kč ({pcs_per_hour:.0f} ks/hod)")
+        lines.append("═══ HLAVNÍ MATERIÁL ═══")
+        lines.append(f"  Materiál (s marží): {mat_cost:.4f} Kč")
+        lines.append(f"  Materiál (náklad):  {mat_cost_raw:.4f} Kč")
+        lines.append(f"  Práce:              {labor_cost:.4f} Kč ({pcs_per_hour:.0f} ks/hod)")
         if admin_cost > 0:
-            lines.append(f"Admin: {admin_cost:.4f} Kč")
+            lines.append(f"  Admin overhead:     {admin_cost:.4f} Kč")
         if machine_cost > 0:
-            lines.append(f"Stroj ({machine_name}): {machine_cost:.4f} Kč")
+            lines.append(f"  Amortizace ({machine_name}): {machine_cost:.4f} Kč")
 
-        for addon in bd.get("addons", []):
-            lines.append(
-                f"+ {addon['material_name']}: {addon.get('subtotal', 0):.4f} Kč"
-            )
+        addons = bd.get("addons", [])
+        if addons:
+            lines.append("")
+            lines.append("═══ PŘÍPLATKY ═══")
+            for addon in addons:
+                addon_mat = addon.get("material_cost", 0)
+                addon_mach = addon.get("machine_cost", 0)
+                addon_sub = addon.get("subtotal", 0)
+                lines.append(f"  {addon['material_name']}:")
+                if addon.get("type") == "addon_time":
+                    secs = addon.get("time_seconds", 0)
+                    lines.append(f"    Čas: {secs:.0f}s × amortizace = {addon_mach:.4f} Kč")
+                else:
+                    if addon_mat > 0:
+                        lines.append(f"    Materiál: {addon_mat:.4f} Kč")
+                    if addon_mach > 0:
+                        lines.append(f"    Amortizace: {addon_mach:.4f} Kč")
+                lines.append(f"    Subtotal: {addon_sub:.4f} Kč")
 
-        lines.append(f"─────────────────")
-        lines.append(f"CELKEM: {result['unit_price']:.2f} Kč/ks")
-        lines.append(
-            f"Tier: {result.get('tier_name', '?')} | "
-            f"Marže: {result.get('margin_pct', 0):.0f}%"
-        )
+        lines.append("")
+        lines.append("═══ SOUHRN ═══")
+        lines.append(f"  Tier:    {result.get('tier_name', '?')}")
+        lines.append(f"  Marže:   {result.get('margin_pct', 0):.0f}%")
+        lines.append(f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks")
+        lines.append(f"  ─────────────────")
+        lines.append(f"  CENA:    {result['unit_price']:.2f} Kč/ks")
+        lines.append(f"  CELKEM:  {result['total_price']:.2f} Kč")
 
         warnings = result.get("warnings", [])
-        for w in warnings:
-            if w["type"] != "error":
-                lines.append(f"⚠️ {w['message']}")
+        if warnings:
+            lines.append("")
+            lines.append("═══ VAROVÁNÍ ═══")
+            for w in warnings:
+                if w["type"] != "error":
+                    lines.append(f"  ⚠️ {w['message']}")
 
         return "\n".join(lines)
 

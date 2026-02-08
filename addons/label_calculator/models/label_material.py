@@ -177,20 +177,38 @@ class LabelMaterial(models.Model):
                 if machine and machine.hourly_amortization:
                     mat.price_per_second = machine.hourly_amortization / 3600
 
-    def get_unit_cost(self, width_mm=0, height_mm=0, quantity=1):
-        """Vrátí materiálovou cenu za 1 ks (bez marže, bez odpadů)."""
+    def get_unit_cost(self, width_mm=0, height_mm=0):
+        """Vrátí cenu za 1 ks materiálu TAK JAK JE v purchase_price.
+        
+        Jsi neplátce DPH → cena s DPH = tvůj reálný náklad.
+        DPH se NEODEČÍTÁ.
+        """
         self.ensure_one()
-        if self.material_type == "area":
-            return width_mm * height_mm * self.price_per_mm2
-        elif self.material_type == "length":
-            # Délkový: jen délka (výška etikety), šířka je fixní z role
-            return height_mm * self.price_per_mm_length
-        elif self.material_type == "time":
-            seconds = self.time_seconds * (self.time_multiplier or 1)
-            return seconds * self.price_per_second
-        elif self.material_type == "pieces":
+        mat_type = self.group_id.material_type
+
+        if mat_type == "area":
+            sheet_area = self.sheet_width_mm * self.sheet_height_mm
+            if not sheet_area:
+                return 0
+            price_per_mm2 = self.purchase_price / sheet_area
+            label_area = width_mm * height_mm
+            return price_per_mm2 * label_area
+
+        elif mat_type == "length":
+            roll_length_mm = self.roll_length_m * 1000
+            if not roll_length_mm:
+                return 0
+            price_per_mm = self.purchase_price / roll_length_mm
+            return price_per_mm * height_mm
+
+        elif mat_type == "pieces":
             return self.component_price
+
+        elif mat_type == "time":
+            return 0
+
         return 0
+
 
     def name_get(self):
         result = []

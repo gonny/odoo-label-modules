@@ -47,9 +47,9 @@ class ResConfigSettings(models.TransientModel):
     )
 
     label_vat_surcharge_pct = fields.Float(
-        string="DPH přirážka (neplátce)",
+        string="Daň z příjmu",
         config_parameter="label_calc.vat_surcharge_pct",
-        default=21,
+        default=15,  # ← změna z 21 na 15!
     )
 
     label_default_material_margin_pct = fields.Float(

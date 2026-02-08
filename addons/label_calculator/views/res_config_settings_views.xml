@@ -38,8 +38,9 @@
           </block>
 
           <block title="Marže a přirážky" name="label_margins_settings">
-            <setting id="label_vat_setting" string="DPH přirážka (neplátce)" help="Přirážka za nákup s DPH bez možnosti odpočtu">
+            <setting id="label_vat_setting" string="Daň z příjmu" help="Sazba daně z příjmu – cena se navýší o / (1 - sazba), aby po zdanění pokryla náklady">
               <field name="label_vat_surcharge_pct"/>
+ %
             </setting>
             <setting id="label_margin_setting" string="Výchozí marže na materiál" help="Fallback pokud tier ani skupina nemají vlastní marži">
               <field name="label_default_material_margin_pct"/>

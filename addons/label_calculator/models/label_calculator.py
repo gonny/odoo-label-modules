@@ -235,7 +235,13 @@ class LabelCalculator(models.AbstractModel):
         self, material, tier, config,
         width_mm, height_mm, is_repeat_design,
     ):
-        """Materiálové náklady BEZ marže – čistý náklad."""
+        """Materiálové náklady BEZ marže – čistý náklad.
+
+        Logika:
+        1. Cena materiálu (purchase_price) – vždy S DPH (jsi neplátce)
+        2. Odpady (zmenšují využitelnou plochu)
+        3. Daň z příjmu (musíš vydělat víc, aby ti po dani zůstalo na náklady)
+        """
         unit_cost = material.get_unit_cost(
             width_mm=width_mm,
             height_mm=height_mm,
@@ -243,16 +249,19 @@ class LabelCalculator(models.AbstractModel):
         if not unit_cost:
             return 0
 
+        # Odpady
         waste_multiplier = self._get_waste_multiplier(
             tier=tier,
             is_repeat_design=is_repeat_design,
         )
         cost_with_waste = unit_cost * waste_multiplier
 
-        vat_pct = float(config.get("vat_surcharge_pct", 21))
-        cost_with_vat = cost_with_waste * (1 + vat_pct / 100)
+        # Daň z příjmu: / (1 - sazba)
+        income_tax_pct = float(config.get("vat_surcharge_pct", 0))
+        if income_tax_pct > 0:
+            cost_with_waste = cost_with_waste / (1 - income_tax_pct / 100)
 
-        return cost_with_vat
+        return cost_with_waste
 
     # ------------------------------------------------------------------
     # Kalkulace příplatkového materiálu (is_addon=True)
@@ -327,33 +336,17 @@ class LabelCalculator(models.AbstractModel):
         width_mm, height_mm,
         is_repeat_design, margin_pct,
     ):
-        """Vypočítá materiálové náklady za 1 ks včetně odpadů, DPH a marže."""
-
-        # Základní cena za 1 ks (bez odpadů, DPH, marže)
-        unit_cost = material.get_unit_cost(
+        """Materiálové náklady S marží."""
+        raw_cost = self._calc_material_cost_raw(
+            material=material,
+            tier=tier,
+            config=config,
             width_mm=width_mm,
             height_mm=height_mm,
-        )
-
-        if not unit_cost:
-            return 0
-
-        # Přičti odpady
-        waste_multiplier = self._get_waste_multiplier(
-            tier=tier,
             is_repeat_design=is_repeat_design,
         )
-        cost_with_waste = unit_cost * waste_multiplier
-
-        # Přičti DPH přirážku (neplátce)
-        vat_pct = float(config.get("vat_surcharge_pct", 21))
-        cost_with_vat = cost_with_waste * (1 + vat_pct / 100)
-
-        # Přičti marži
-        cost_with_margin = cost_with_vat * (1 + margin_pct / 100)
-
+        cost_with_margin = raw_cost * (1 + margin_pct / 100)
         return cost_with_margin
-
     # ------------------------------------------------------------------
     # Pomocné metody
     # ------------------------------------------------------------------
@@ -385,14 +378,21 @@ class LabelCalculator(models.AbstractModel):
     def _get_waste_multiplier(self, tier, is_repeat_design=False):
         """Vypočítá násobitel odpadů.
 
-        Příklad: test 10% + prořez 10% → 1.10 × 1.10 = 1.21
-        U opakovaného designu: test = 0% → 1.00 × 1.10 = 1.10
+        Logika: odpady ZMENŠUJÍ využitelnou plochu.
+        10% test + 15% prořez → využiju jen 90% × 85% = 76.5% tabule
+        → cena za mm² je vyšší: dělím menší plochou
+        → ekvivalent: násobím 1/0.90 × 1/0.85 = 1.3072
+
+        U opakovaného designu: test = 0% → 1/1.00 × 1/0.85 = 1.1765
         """
         test_pct = 0 if is_repeat_design else tier.waste_test_percentage
         prune_pct = tier.waste_pruning_percentage
 
-        multiplier = (1 + test_pct / 100) * (1 + prune_pct / 100)
-        return multiplier
+        test_factor = 1 / (1 - test_pct / 100) if test_pct < 100 else 1
+        prune_factor = 1 / (1 - prune_pct / 100) if prune_pct < 100 else 1
+
+        return test_factor * prune_factor
+
 
     def _get_effective_hourly_rate(self, config):
         """Hodinová sazba + fixní náklady rozpočítané na hodinu."""

@@ -8,7 +8,7 @@
     <field name="arch" type="xml">
 
       <!-- ============================================ -->
-      <!-- SLOUPCE v inline list (tabulka řádků)        -->
+      <!-- SLOUPCE v inline list                        -->
       <!-- ============================================ -->
       <xpath expr="//field[@name='order_line']/list/field[@name='price_unit']" position="before">
         <field name="pricing_type" column_invisible="1"/>
@@ -22,7 +22,18 @@
       </xpath>
 
       <!-- ============================================ -->
-      <!-- ZÁLOŽKA "Kalkulace" v notebook               -->
+      <!-- POPUP formulář – breakdown                   -->
+      <!-- ============================================ -->
+      <xpath expr="//field[@name='order_line']/form//div[@name='invoice_lines']" position="after">
+        <group string="Rozpad ceny" invisible="pricing_type != 'calculator'" name="label_breakdown_popup">
+          <div colspan="2" style="white-space: pre-wrap; font-family: monospace; font-size: 12px; background: #f8f9fa; padding: 8px; border-radius: 4px;">
+            <field name="label_price_breakdown" readonly="1" nolabel="1"/>
+          </div>
+        </group>
+      </xpath>
+
+      <!-- ============================================ -->
+      <!-- ZÁLOŽKA "Kalkulace"                          -->
       <!-- ============================================ -->
       <xpath expr="//page[@name='order_lines']" position="after">
         <page string="Kalkulace" name="label_calculation_page">
