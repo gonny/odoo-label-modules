@@ -51,10 +51,11 @@ class LabelMaterial(models.Model):
         store=True,
     )
     purchase_price_incl_vat = fields.Float(
-        string="Cena s DPH",
-        digits=(12, 4),
-        compute="_compute_vat_prices",
+        string="Nákupní cena s DPH",
+        compute="_compute_price_incl_vat",
         store=True,
+        digits=(12, 2),
+        help="Cena vždy S DPH – používá se pro kalkulaci.",
     )
 
     # === Rozměry zdroje (tabule, role) ===
@@ -131,6 +132,16 @@ class LabelMaterial(models.Model):
     )
 
     @api.depends("purchase_price", "purchase_vat_included", "purchase_vat_pct")
+    def _compute_price_incl_vat(self):
+        for mat in self:
+            if mat.purchase_vat_included:
+                mat.purchase_price_incl_vat = mat.purchase_price
+            else:
+                vat = mat.purchase_vat_pct or 0
+                mat.purchase_price_incl_vat = mat.purchase_price * (1 + vat / 100)
+
+
+    @api.depends("purchase_price", "purchase_vat_included", "purchase_vat_pct")
     def _compute_vat_prices(self):
         for mat in self:
             vat_rate = mat.purchase_vat_pct / 100 if mat.purchase_vat_pct else 0
@@ -178,19 +189,19 @@ class LabelMaterial(models.Model):
                     mat.price_per_second = machine.hourly_amortization / 3600
 
     def get_unit_cost(self, width_mm=0, height_mm=0):
-        """Vrátí cenu za 1 ks materiálu TAK JAK JE v purchase_price.
+        """Vrátí cenu za 1 ks materiálu VŽDY S DPH.
         
-        Jsi neplátce DPH → cena s DPH = tvůj reálný náklad.
-        DPH se NEODEČÍTÁ.
+        Používá purchase_price_incl_vat – dopočítanou cenu s DPH.
         """
         self.ensure_one()
         mat_type = self.group_id.material_type
+        price = self.purchase_price_incl_vat
 
         if mat_type == "area":
             sheet_area = self.sheet_width_mm * self.sheet_height_mm
             if not sheet_area:
                 return 0
-            price_per_mm2 = self.purchase_price / sheet_area
+            price_per_mm2 = price / sheet_area
             label_area = width_mm * height_mm
             return price_per_mm2 * label_area
 
@@ -198,7 +209,7 @@ class LabelMaterial(models.Model):
             roll_length_mm = self.roll_length_m * 1000
             if not roll_length_mm:
                 return 0
-            price_per_mm = self.purchase_price / roll_length_mm
+            price_per_mm = price / roll_length_mm
             return price_per_mm * height_mm
 
         elif mat_type == "pieces":
@@ -208,7 +219,6 @@ class LabelMaterial(models.Model):
             return 0
 
         return 0
-
 
     def name_get(self):
         result = []

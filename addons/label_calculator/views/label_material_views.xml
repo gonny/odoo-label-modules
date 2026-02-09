@@ -23,8 +23,8 @@
               <field name="purchase_price"/>
               <field name="purchase_vat_included"/>
               <field name="purchase_vat_pct"/>
+              <field name="purchase_price_incl_vat" string="Cena s DPH (dopočtená)" readonly="1"/>
               <field name="purchase_price_excl_vat" readonly="1"/>
-              <field name="purchase_price_incl_vat" readonly="1"/>
             </group>
           </group>
           <group>

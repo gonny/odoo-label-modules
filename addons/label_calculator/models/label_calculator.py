@@ -155,18 +155,24 @@ class LabelCalculator(models.AbstractModel):
             material_cost_only += addon.get("material_cost", 0)
             machine_cost_only += addon.get("machine_cost", 0)
 
+        # Před zaokrouhlením
+        unit_price_raw = unit_price
+
+        # Zaokrouhlení na 10 haléřů nahoru
+        unit_price = self._round_price(unit_price)
+        total_price = round(unit_price * quantity, 2)
+
         return {
             "unit_price": round(unit_price, 2),
+            "unit_price_raw": round(unit_price_raw, 4),
             "total_price": round(total_price, 2),
-            "material_cost_only": round(material_cost_only + machine_cost_only, 4),
+            "material_cost_only": round(material_cost_only, 4),
             "quantity": quantity,
             "tier_name": tier.name,
             "margin_pct": margin_pct,
             "breakdown": {
                 "main": main_result,
                 "addons": addon_results,
-                "unit_price": round(unit_price, 2),
-                "total_price": round(total_price, 2),
             },
             "warnings": warnings,
         }
@@ -235,12 +241,11 @@ class LabelCalculator(models.AbstractModel):
         self, material, tier, config,
         width_mm, height_mm, is_repeat_design,
     ):
-        """Materiálové náklady BEZ marže – čistý náklad.
+        """Materiálové náklady BEZ marže.
 
-        Logika:
-        1. Cena materiálu (purchase_price) – vždy S DPH (jsi neplátce)
+        1. Cena materiálu (vždy S DPH – get_unit_cost to zajistí)
         2. Odpady (zmenšují využitelnou plochu)
-        3. Daň z příjmu (musíš vydělat víc, aby ti po dani zůstalo na náklady)
+        3. Daň z příjmu (/ (1 - sazba))
         """
         unit_cost = material.get_unit_cost(
             width_mm=width_mm,
@@ -256,12 +261,13 @@ class LabelCalculator(models.AbstractModel):
         )
         cost_with_waste = unit_cost * waste_multiplier
 
-        # Daň z příjmu: / (1 - sazba)
+        # Daň z příjmu
         income_tax_pct = float(config.get("vat_surcharge_pct", 0))
         if income_tax_pct > 0:
             cost_with_waste = cost_with_waste / (1 - income_tax_pct / 100)
 
         return cost_with_waste
+
 
     # ------------------------------------------------------------------
     # Kalkulace příplatkového materiálu (is_addon=True)
@@ -336,7 +342,11 @@ class LabelCalculator(models.AbstractModel):
         width_mm, height_mm,
         is_repeat_design, margin_pct,
     ):
-        """Materiálové náklady S marží."""
+        """Materiálové náklady S marží.
+        
+        Marže jako přirážka: 320% = cena je (1 + 3.20) = 4.2× nákladu.
+        Marže 0% = prodám za náklad.
+        """
         raw_cost = self._calc_material_cost_raw(
             material=material,
             tier=tier,
@@ -345,11 +355,25 @@ class LabelCalculator(models.AbstractModel):
             height_mm=height_mm,
             is_repeat_design=is_repeat_design,
         )
+
         cost_with_margin = raw_cost * (1 + margin_pct / 100)
+
         return cost_with_margin
+
     # ------------------------------------------------------------------
     # Pomocné metody
     # ------------------------------------------------------------------
+
+    def _round_price(self, price):
+        """Zaokrouhlí cenu na 10 haléřů nahoru.
+        
+        15.21 → 15.30
+        15.30 → 15.30 (beze změny)
+        15.01 → 15.10
+        """
+        import math
+        return math.ceil(price * 10) / 10
+
     def _find_tier(self, group, quantity):
         """Najde správnou hladinu pro dané množství a skupinu."""
         return self.env["label.production.tier"].search(

@@ -13,46 +13,65 @@
             <setting id="label_hourly_rate_setting" string="Hodinová sazba" help="Tvoje požadovaná hodinová sazba za práci">
               <field name="label_hourly_rate"/>
             </setting>
-            <setting id="label_admin_overhead_setting" string="Admin overhead na zakázku" help="Komunikace, fakturace, balení, pošta – rozpočítá se na kusy">
+            <setting id="label_admin_overhead_setting" string="Admin overhead na zakázku" help="Komunikace, fakturace, balení – rozpočítá se na kusy">
               <field name="label_admin_overhead_enabled"/>
               <div invisible="not label_admin_overhead_enabled">
-                <field name="label_admin_overhead_minutes"/>
+                <field name="label_admin_overhead_minutes" class="oe_inline"/>
  minut
               </div>
             </setting>
           </block>
 
-          <block title="Fixní náklady (prostor a provoz)" name="label_fixed_costs_settings">
-            <setting id="label_rent_setting" string="Pronájem / servis" help="Roční náklad na pronájem, servisní prohlídky strojů">
-              <field name="label_fixed_rent_yearly"/>
+          <block title="Stroje a provoz" name="label_machines_settings">
+            <setting id="label_amortization_setting" string="Amortizace strojů" help="Započítat amortizaci strojů do ceny">
+              <field name="label_amortization_enabled"/>
             </setting>
-            <setting id="label_energy_setting" string="Elektřina / topení" help="Roční náklad na elektřinu a topení">
-              <field name="label_fixed_energy_yearly"/>
-            </setting>
-            <setting id="label_other_fixed_setting" string="Ostatní provozní náklady" help="Internet, pojištění, spotřební materiál... (za rok)">
-              <field name="label_fixed_other_yearly"/>
-            </setting>
-            <setting id="label_working_hours_setting" string="Pracovních hodin za rok" help="Pro rozpočítání fixních nákladů. Typicky 250 dní × 8 hod = 2000">
-              <field name="label_working_hours_yearly"/>
+            <setting id="label_fixed_costs_setting" string="Fixní provozní náklady" help="Přičíst fixní náklady k hodinové sazbě">
+              <field name="label_fixed_costs_enabled"/>
+              <div invisible="not label_fixed_costs_enabled">
+                <div class="row mt8">
+                  <label for="label_fixed_rent_yearly" class="col-lg-4"/>
+                  <field name="label_fixed_rent_yearly" class="oe_inline"/>
+ Kč/rok
+                </div>
+                <div class="row mt8">
+                  <label for="label_fixed_energy_yearly" class="col-lg-4"/>
+                  <field name="label_fixed_energy_yearly" class="oe_inline"/>
+ Kč/rok
+                </div>
+                <div class="row mt8">
+                  <label for="label_fixed_other_yearly" class="col-lg-4"/>
+                  <field name="label_fixed_other_yearly" class="oe_inline"/>
+ Kč/rok
+                </div>
+                <div class="row mt8">
+                  <label for="label_working_hours_yearly" class="col-lg-4"/>
+                  <field name="label_working_hours_yearly" class="oe_inline"/>
+ hod/rok
+                </div>
+              </div>
             </setting>
           </block>
 
-          <block title="Marže a přirážky" name="label_margins_settings">
-            <setting id="label_vat_setting" string="Daň z příjmu" help="Sazba daně z příjmu – cena se navýší o / (1 - sazba), aby po zdanění pokryla náklady">
-              <field name="label_vat_surcharge_pct"/>
+          <block title="Marže a daně" name="label_margins_settings">
+            <setting id="label_vat_setting" string="Daň z příjmu" help="Navýšení ceny materiálu: cena / (1 - sazba)">
+              <field name="label_vat_surcharge_pct" class="oe_inline"/>
  %
             </setting>
-            <setting id="label_margin_setting" string="Výchozí marže na materiál" help="Fallback pokud tier ani skupina nemají vlastní marži">
-              <field name="label_default_material_margin_pct"/>
+            <setting id="label_margin_setting" string="Výchozí marže na materiál" help="Marže jako přirážka: 320% = cena je 4.2× nákladu. 0% = prodej za náklad. Záporná marže = ztráta.">
+              <field name="label_default_material_margin_pct" class="oe_inline"/>
+ %
             </setting>
           </block>
 
           <block title="Minima (varování)" name="label_minimums_settings">
-            <setting id="label_min_price_setting" string="Minimální cena zakázky" help="Pod touto cenou se zobrazí varování v rozpadu ceny">
-              <field name="label_min_order_price"/>
+            <setting id="label_min_price_setting" string="Minimální cena zakázky">
+              <field name="label_min_order_price" class="oe_inline"/>
+ Kč
             </setting>
-            <setting id="label_min_qty_setting" string="Minimální objednávané množství" help="Pod tímto množstvím se zobrazí varování v rozpadu ceny">
-              <field name="label_min_order_quantity"/>
+            <setting id="label_min_qty_setting" string="Minimální množství">
+              <field name="label_min_order_quantity" class="oe_inline"/>
+ ks
             </setting>
           </block>
 

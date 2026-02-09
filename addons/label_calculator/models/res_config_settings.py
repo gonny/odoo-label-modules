@@ -22,6 +22,18 @@ class ResConfigSettings(models.TransientModel):
         default=15,
     )
 
+    label_amortization_enabled = fields.Boolean(
+        string="Započítat amortizaci strojů",
+        config_parameter="label_calc.amortization_enabled",
+        default=True,
+    )
+
+    label_fixed_costs_enabled = fields.Boolean(
+        string="Započítat fixní náklady do sazby",
+        config_parameter="label_calc.fixed_costs_enabled",
+        default=True,
+    )
+
     label_fixed_rent_yearly = fields.Float(
         string="Pronájem / servis",
         config_parameter="label_calc.fixed_rent_yearly",
@@ -49,7 +61,7 @@ class ResConfigSettings(models.TransientModel):
     label_vat_surcharge_pct = fields.Float(
         string="Daň z příjmu",
         config_parameter="label_calc.vat_surcharge_pct",
-        default=15,  # ← změna z 21 na 15!
+        default=15,
     )
 
     label_default_material_margin_pct = fields.Float(

@@ -273,7 +273,14 @@ class SaleOrderLine(models.Model):
         lines.append(f"  Marže:   {result.get('margin_pct', 0):.0f}%")
         lines.append(f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks")
         lines.append(f"  ─────────────────")
-        lines.append(f"  CENA:    {result['unit_price']:.2f} Kč/ks")
+
+        unit_raw = result.get("unit_price_raw", 0)
+        unit_final = result["unit_price"]
+        if unit_raw and abs(unit_raw - unit_final) > 0.001:
+            lines.append(f"  Před zaokr.: {unit_raw:.4f} Kč/ks")
+            lines.append(f"  CENA:        {unit_final:.2f} Kč/ks (↑ 10 hal.)")
+        else:
+            lines.append(f"  CENA:    {unit_final:.2f} Kč/ks")
         lines.append(f"  CELKEM:  {result['total_price']:.2f} Kč")
 
         warnings = result.get("warnings", [])
