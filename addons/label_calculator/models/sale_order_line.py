@@ -40,7 +40,7 @@ class SaleOrderLine(models.Model):
         string="Bez testovacích kusů",
         default=False,
         help="Zaškrtni pokud design už byl ověřen a není potřeba "
-            "testovací kusy. Sníží náklad na materiál.",
+             "testovací kusy. Sníží náklad na materiál.",
     )
 
     label_ttr_material_id = fields.Many2one(
@@ -70,6 +70,8 @@ class SaleOrderLine(models.Model):
         string="Náklad materiálu/ks",
         digits=(12, 4),
         readonly=True,
+        help="Čistý náklad na materiál jednoho štítku (bez práce a marže). "
+             "Pod touto cenou dotujete materiál.",
     )
 
     label_price_breakdown = fields.Text(
@@ -87,6 +89,11 @@ class SaleOrderLine(models.Model):
         readonly=True,
     )
 
+    label_order_display = fields.Char(
+        string="Objednávka",
+        compute="_compute_order_display",
+        store=True,
+    )
     # === CRUD: přepočítat breakdown při uložení ===
 
     @api.model_create_multi
@@ -114,6 +121,9 @@ class SaleOrderLine(models.Model):
     def _recompute_label_fields(self):
         """Přepočítá kalkulační pole a uloží do DB."""
         self.ensure_one()
+        if not self.label_material_id or not self.label_height_mm:
+            return
+
         result = self._run_calculation()
         if not result or not result.get("breakdown"):
             return
@@ -131,6 +141,20 @@ class SaleOrderLine(models.Model):
 
         # Přímý SQL update aby se vyhnul rekurzi
         super(SaleOrderLine, self).write(vals)
+
+    #=== Vlastní computed pole pro groupované zobrazení historie nabídek zákazníka ===
+    @api.depends("order_id", "order_id.name", "order_id.create_date")
+    def _compute_order_display(self):
+        for line in self:
+            if line.order_id and line.order_id.create_date:
+                date_str = line.order_id.create_date.strftime("%d.%m.%Y")
+                line.label_order_display = (
+                    f"{line.order_id.name} – {date_str}"
+                )
+            elif line.order_id:
+                line.label_order_display = line.order_id.name
+            else:
+                line.label_order_display = ""
 
     # === Onchange: výběr produktu ===
 
@@ -209,44 +233,90 @@ class SaleOrderLine(models.Model):
         if desc:
             self.name = desc
 
-    # === Kopírování dat do objednávky ===
+    # === Kopírování z historie ===
+
     def action_copy_to_current_order(self):
         """Zkopíruje parametry tohoto řádku do aktuální objednávky."""
         self.ensure_one()
 
-        # Najdi aktuální objednávku (z kontextu)
         order_id = self.env.context.get("active_order_id")
         if not order_id:
-            return
+            # Fallback – zkus najít poslední draft objednávku
+            # pro stejného zákazníka
+            partner = self.order_id.partner_id
+            if partner:
+                draft_order = self.env["sale.order"].search(
+                    [
+                        ("partner_id", "=", partner.id),
+                        ("state", "=", "draft"),
+                    ],
+                    order="create_date desc",
+                    limit=1,
+                )
+                if draft_order:
+                    order_id = draft_order.id
+
+        if not order_id:
+            return {
+                "type": "ir.actions.client",
+                "tag": "display_notification",
+                "params": {
+                    "title": "Chyba",
+                    "message": "Nenalezena otevřená objednávka pro kopírování. "
+                               "Nejdřív vytvořte novou nabídku pro tohoto zákazníka.",
+                    "type": "warning",
+                    "sticky": False,
+                },
+            }
 
         order = self.env["sale.order"].browse(order_id)
-        if not order.exists():
-            return
+        if not order.exists() or order.state != "draft":
+            return {
+                "type": "ir.actions.client",
+                "tag": "display_notification",
+                "params": {
+                    "title": "Chyba",
+                    "message": "Objednávka musí být ve stavu 'Nabídka' pro kopírování.",
+                    "type": "warning",
+                    "sticky": False,
+                },
+            }
 
-        # Vytvoř nový řádek s parametry z historie
+        addon_ids = (
+            [(6, 0, self.label_addon_ids.ids)]
+            if self.label_addon_ids
+            else [(5, 0, 0)]
+        )
+
         vals = {
             "order_id": order.id,
             "product_id": self.product_id.id,
             "product_template_id": self.product_template_id.id,
             "product_uom_qty": self.product_uom_qty,
-            "label_material_id": self.label_material_id.id if self.label_material_id else False,
+            "label_material_id": (
+                self.label_material_id.id
+                if self.label_material_id else False
+            ),
             "label_width_mm": self.label_width_mm,
             "label_height_mm": self.label_height_mm,
-            "label_ttr_material_id": self.label_ttr_material_id.id if self.label_ttr_material_id else False,
-            "label_is_repeat_design": True,  # Kopírujeme → bez testovacích kusů
+            "label_ttr_material_id": (
+                self.label_ttr_material_id.id
+                if self.label_ttr_material_id else False
+            ),
+            "label_addon_ids": addon_ids,
+            "label_is_repeat_design": True,
         }
 
-        new_line = self.env["sale.order.line"].create(vals)
+        self.env["sale.order.line"].create(vals)
 
-        # Přepočítej cenu
-        if new_line.pricing_type == "calculator":
-            new_line._recompute_label_fields()
-
+        # Vrátit se na objednávku
         return {
-            "type": "ir.actions.client",
-            "tag": "reload",
+            "type": "ir.actions.act_window",
+            "res_model": "sale.order",
+            "res_id": order.id,
+            "view_mode": "form",
+            "target": "current",
         }
-
 
     # === Pomocné metody ===
 
@@ -283,11 +353,16 @@ class SaleOrderLine(models.Model):
         lines.append("═══ HLAVNÍ MATERIÁL ═══")
         lines.append(f"  Materiál (s marží): {mat_cost:.4f} Kč")
         lines.append(f"  Materiál (náklad):  {mat_cost_raw:.4f} Kč")
-        lines.append(f"  Práce:              {labor_cost:.4f} Kč ({pcs_per_hour:.0f} ks/hod)")
+        lines.append(
+            f"  Práce:              {labor_cost:.4f} Kč "
+            f"({pcs_per_hour:.0f} ks/hod)"
+        )
         if admin_cost > 0:
             lines.append(f"  Admin overhead:     {admin_cost:.4f} Kč")
         if machine_cost > 0:
-            lines.append(f"  Amortizace ({machine_name}): {machine_cost:.4f} Kč")
+            lines.append(
+                f"  Amortizace ({machine_name}): {machine_cost:.4f} Kč"
+            )
 
         addons = bd.get("addons", [])
         if addons:
@@ -300,7 +375,10 @@ class SaleOrderLine(models.Model):
                 lines.append(f"  {addon['material_name']}:")
                 if addon.get("type") == "addon_time":
                     secs = addon.get("time_seconds", 0)
-                    lines.append(f"    Čas: {secs:.0f}s × amortizace = {addon_mach:.4f} Kč")
+                    lines.append(
+                        f"    Čas: {secs:.0f}s × amortizace = "
+                        f"{addon_mach:.4f} Kč"
+                    )
                 else:
                     if addon_mat > 0:
                         lines.append(f"    Materiál: {addon_mat:.4f} Kč")
@@ -312,14 +390,18 @@ class SaleOrderLine(models.Model):
         lines.append("═══ SOUHRN ═══")
         lines.append(f"  Tier:    {result.get('tier_name', '?')}")
         lines.append(f"  Marže:   {result.get('margin_pct', 0):.0f}%")
-        lines.append(f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks")
+        lines.append(
+            f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks"
+        )
         lines.append(f"  ─────────────────")
 
         unit_raw = result.get("unit_price_raw", 0)
         unit_final = result["unit_price"]
         if unit_raw and abs(unit_raw - unit_final) > 0.001:
             lines.append(f"  Před zaokr.: {unit_raw:.4f} Kč/ks")
-            lines.append(f"  CENA:        {unit_final:.2f} Kč/ks (↑ 10 hal.)")
+            lines.append(
+                f"  CENA:        {unit_final:.2f} Kč/ks (↑ 10 hal.)"
+            )
         else:
             lines.append(f"  CENA:    {unit_final:.2f} Kč/ks")
         lines.append(f"  CELKEM:  {result['total_price']:.2f} Kč")

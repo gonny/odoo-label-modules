@@ -811,3 +811,71 @@ class TestLabelCalculator(TransactionCase):
             "TEST 16: Excel shoda – satén+TTR náklad=%.4f Kč ✅",
             result["material_cost_only"],
         )
+
+    # ─────────────────────────────────────────────
+    # TEST 17: Flow SO → Faktura
+    # ─────────────────────────────────────────────
+    def test_17_invoice_flow(self):
+        """Ověření celého flow: SO → Potvrzení → Faktura."""
+        # Vytvoř produkt s kalkulačkou
+        product = self.env["product.template"].create({
+            "name": "Test Gravírovaný štítek",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        # Vytvoř zákazníka
+        partner = self.env["res.partner"].create({
+            "name": "Test Zákazník",
+        })
+
+        # Vytvoř objednávku
+        order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+        })
+
+        # Přidej řádek
+        line = self.env["sale.order.line"].create({
+            "order_id": order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 10,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+
+        # Ověř, že se cena spočítala
+        self.assertTrue(line.price_unit > 0)
+        self.assertTrue(line.label_price_breakdown)
+
+        # Potvrď objednávku
+        order.action_confirm()
+        self.assertEqual(order.state, "sale")
+
+        # Vytvoř fakturu
+        invoice = order._create_invoices()
+        self.assertTrue(invoice)
+
+        # Ověř, že se pole přenesly na fakturu
+        inv_line = invoice.invoice_line_ids.filtered(
+            lambda l: l.product_id == product.product_variant_id
+        )
+        self.assertTrue(inv_line)
+        self.assertEqual(
+            inv_line.label_material_id.id,
+            self.mat_leatherette.id,
+        )
+        self.assertEqual(inv_line.label_width_mm, 30)
+        self.assertEqual(inv_line.label_height_mm, 20)
+        self.assertTrue(inv_line.label_material_cost_only > 0)
+        self.assertTrue(inv_line.label_price_breakdown)
+
+        _logger.info(
+            "TEST 17: SO → Faktura – pole přeneseny ✅ "
+            "(materiál: %s, cena: %.2f, náklad: %.4f)",
+            inv_line.label_material_id.name,
+            inv_line.price_unit,
+            inv_line.label_material_cost_only,
+        )

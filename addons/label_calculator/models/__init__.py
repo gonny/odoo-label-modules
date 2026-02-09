@@ -4,9 +4,8 @@ from . import label_material
 from . import label_production_tier
 from . import label_material_tier_override
 from . import label_calculator
-from . import res_config_settings
 from . import product_template
-from . import sale_order_line
-from . import sale_order_ext
 from . import sale_order
-from . import account_move_line_ext
+from . import sale_order_line
+from . import account_move_line
+from . import res_config_settings

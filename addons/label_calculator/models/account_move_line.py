@@ -1,5 +1,3 @@
-# models/account_move_line_ext.py
-
 from odoo import models, fields
 
 
@@ -13,10 +11,12 @@ class AccountMoveLine(models.Model):
     )
     label_width_mm = fields.Float(
         string="Šířka (mm)",
+        digits=(8, 1),
         readonly=True,
     )
     label_height_mm = fields.Float(
         string="Výška/Délka (mm)",
+        digits=(8, 1),
         readonly=True,
     )
     label_material_cost_only = fields.Float(

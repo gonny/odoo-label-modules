@@ -22,12 +22,44 @@ class SaleOrder(models.Model):
                 ("pricing_type", "=", "calculator"),
                 ("order_id.state", "in", ["sale", "done"]),
             ]
-            if order.id:
+            if order.id and isinstance(order.id, int):
                 domain.append(("order_id", "!=", order.id))
 
             lines = self.env["sale.order.line"].search(
                 domain,
-                order="create_date desc",
-                limit=50,
+                order="order_id desc, sequence asc",
+                limit=100,
             )
             order.label_partner_history_ids = lines
+
+    def action_open_partner_history(self):
+        """Otevře historii zákazníka v standalone okně s groupby + kopírováním."""
+        self.ensure_one()
+        if not self.partner_id:
+            return
+
+        domain = [
+            ("order_id.partner_id", "=", self.partner_id.id),
+            ("pricing_type", "=", "calculator"),
+            ("order_id.state", "in", ["sale", "done"]),
+        ]
+        if self.id and isinstance(self.id, int):
+            domain.append(("order_id", "!=", self.id))
+
+        return {
+            "name": f"Historie – {self.partner_id.name}",
+            "type": "ir.actions.act_window",
+            "res_model": "sale.order.line",
+            "view_mode": "list",
+            "views": [
+                (self.env.ref(
+                    "label_calculator.view_label_history_list"
+                ).id, "list"),
+            ],
+            "domain": domain,
+            "context": {
+                "group_by": ["order_id"],
+                "active_order_id": self.id,
+            },
+            "target": "current",
+        }
