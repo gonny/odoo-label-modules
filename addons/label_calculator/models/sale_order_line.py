@@ -37,8 +37,10 @@ class SaleOrderLine(models.Model):
     )
 
     label_is_repeat_design = fields.Boolean(
-        string="Opakovaný design",
+        string="Bez testovacích kusů",
         default=False,
+        help="Zaškrtni pokud design už byl ověřen a není potřeba "
+            "testovací kusy. Sníží náklad na materiál.",
     )
 
     label_ttr_material_id = fields.Many2one(
@@ -207,6 +209,45 @@ class SaleOrderLine(models.Model):
         if desc:
             self.name = desc
 
+    # === Kopírování dat do objednávky ===
+    def action_copy_to_current_order(self):
+        """Zkopíruje parametry tohoto řádku do aktuální objednávky."""
+        self.ensure_one()
+
+        # Najdi aktuální objednávku (z kontextu)
+        order_id = self.env.context.get("active_order_id")
+        if not order_id:
+            return
+
+        order = self.env["sale.order"].browse(order_id)
+        if not order.exists():
+            return
+
+        # Vytvoř nový řádek s parametry z historie
+        vals = {
+            "order_id": order.id,
+            "product_id": self.product_id.id,
+            "product_template_id": self.product_template_id.id,
+            "product_uom_qty": self.product_uom_qty,
+            "label_material_id": self.label_material_id.id if self.label_material_id else False,
+            "label_width_mm": self.label_width_mm,
+            "label_height_mm": self.label_height_mm,
+            "label_ttr_material_id": self.label_ttr_material_id.id if self.label_ttr_material_id else False,
+            "label_is_repeat_design": True,  # Kopírujeme → bez testovacích kusů
+        }
+
+        new_line = self.env["sale.order.line"].create(vals)
+
+        # Přepočítej cenu
+        if new_line.pricing_type == "calculator":
+            new_line._recompute_label_fields()
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "reload",
+        }
+
+
     # === Pomocné metody ===
 
     def _run_calculation(self):
@@ -332,3 +373,17 @@ class SaleOrderLine(models.Model):
         for addon in self.label_addon_ids:
             parts.append(f"+ {addon.display_name}")
         return ", ".join(parts)
+
+    # Přenese pole definované v Prodej do Faktury, aby se zachoval rozpad ceny a informace o materiálu.
+    def _prepare_invoice_line(self, **optional_values):
+        """Přenese kalkulační pole na fakturu."""
+        vals = super()._prepare_invoice_line(**optional_values)
+        if self.pricing_type == "calculator":
+            vals.update({
+                "label_material_id": self.label_material_id.id,
+                "label_width_mm": self.label_width_mm,
+                "label_height_mm": self.label_height_mm,
+                "label_material_cost_only": self.label_material_cost_only,
+                "label_price_breakdown": self.label_price_breakdown,
+            })
+        return vals

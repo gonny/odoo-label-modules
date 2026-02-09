@@ -54,6 +54,29 @@
           </field>
         </page>
       </xpath>
+      <!-- ============================================ -->
+      <!-- ZÁLOŽKA "Historie zákazníka"                 -->
+      <!-- ============================================ -->
+      <xpath expr="//page[@name='label_calculation_page']" position="after">
+        <page string="Historie zákazníka" name="label_history_page" invisible="not partner_id">
+          <field name="label_partner_history_ids" mode="list" readonly="1" context="{'active_order_id': id}">
+            <list create="0" delete="0" edit="0" default_group_by="order_id">
+              <field name="order_id" string="Objednávka"/>
+              <field name="create_date" string="Datum"/>
+              <field name="product_template_id" string="Produkt"/>
+              <field name="label_material_id" string="Varianta"/>
+              <field name="label_width_mm" string="Šířka"/>
+              <field name="label_height_mm" string="Výška"/>
+              <field name="product_uom_qty" string="Ks"/>
+              <field name="label_ttr_material_id" string="TTR"/>
+              <field name="price_unit" string="Cena/ks"/>
+              <field name="price_subtotal" string="Celkem"/>
+              <button name="action_copy_to_current_order" string="Kopírovat" type="object" icon="fa-copy" class="btn-link"/>
+            </list>
+          </field>
+        </page>
+      </xpath>
+
 
     </field>
   </record>

@@ -7,3 +7,6 @@ from . import label_calculator
 from . import res_config_settings
 from . import product_template
 from . import sale_order_line
+from . import sale_order_ext
+from . import sale_order
+from . import account_move_line_ext

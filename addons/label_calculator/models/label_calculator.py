@@ -150,10 +150,8 @@ class LabelCalculator(models.AbstractModel):
 
         # Materiálový náklad (bez marže, bez práce)
         material_cost_only = main_result.get("material_cost_raw", 0)
-        machine_cost_only = main_result.get("machine_cost", 0)
         for addon in addon_results:
-            material_cost_only += addon.get("material_cost", 0)
-            machine_cost_only += addon.get("machine_cost", 0)
+            material_cost_only += addon.get("material_cost_raw", 0)
 
         # Před zaokrouhlením
         unit_price_raw = unit_price
@@ -217,9 +215,14 @@ class LabelCalculator(models.AbstractModel):
             admin_minutes = float(config.get("admin_overhead_minutes", 15))
             admin_cost = (admin_minutes / 60) * effective_hourly / quantity
 
-        # 4. Amortizace stroje
+        # 4. Amortizace stroje (jen pokud je zapnutá)
+        amortization_enabled = config.get("amortization_enabled", "True")
         machine_cost = 0
-        if group.machine_id and group.machine_id.hourly_amortization:
+        if (
+            amortization_enabled == "True"
+            and group.machine_id
+            and group.machine_id.hourly_amortization
+        ):
             machine_cost = group.machine_id.hourly_amortization / pcs_per_hour
 
         subtotal = mat_cost + labor_cost + admin_cost + machine_cost
@@ -288,7 +291,12 @@ class LabelCalculator(models.AbstractModel):
             # TIME: cena = čas × amortizace stroje
             seconds = material.time_seconds * (material.time_multiplier or 1)
             machine = group.machine_id
-            if machine and machine.hourly_amortization:
+            amortization_enabled = config.get("amortization_enabled", "True")
+            if (
+                amortization_enabled == "True"
+                and machine
+                and machine.hourly_amortization
+            ):
                 time_cost = seconds * (machine.hourly_amortization / 3600)
             else:
                 time_cost = 0
@@ -298,6 +306,7 @@ class LabelCalculator(models.AbstractModel):
                 "type": "addon_time",
                 "time_seconds": seconds,
                 "machine_name": machine.name if machine else None,
+                "material_cost_raw": 0,
                 "material_cost": 0,
                 "machine_cost": round(time_cost, 6),
                 "subtotal": round(time_cost, 4),
@@ -305,6 +314,15 @@ class LabelCalculator(models.AbstractModel):
 
         else:
             # AREA / LENGTH / PIECES: materiálové náklady
+            raw_cost = self._calc_material_cost_raw(
+                material=material,
+                tier=tier,
+                config=config,
+                width_mm=width_mm,
+                height_mm=height_mm,
+                is_repeat_design=is_repeat_design,
+            )
+
             mat_cost = self._calc_material_cost(
                 material=material,
                 tier=tier,
@@ -315,9 +333,14 @@ class LabelCalculator(models.AbstractModel):
                 margin_pct=margin_pct,
             )
 
-            # + amortizace stroje (pokud addon má stroj)
+            # + amortizace stroje (pokud addon má stroj a amortizace je zapnutá)
             machine_cost = 0
-            if group.machine_id and group.machine_id.hourly_amortization:
+            amortization_enabled = config.get("amortization_enabled", "True")
+            if (
+                amortization_enabled == "True"
+                and group.machine_id
+                and group.machine_id.hourly_amortization
+            ):
                 machine_cost = (
                     group.machine_id.hourly_amortization / pcs_per_hour
                     if pcs_per_hour else 0
@@ -328,6 +351,7 @@ class LabelCalculator(models.AbstractModel):
             return {
                 "material_name": material.display_name,
                 "type": "addon_material",
+                "material_cost_raw": round(raw_cost, 6),
                 "material_cost": round(mat_cost, 6),
                 "machine_cost": round(machine_cost, 6),
                 "machine_name": group.machine_id.name if group.machine_id else None,
@@ -422,13 +446,17 @@ class LabelCalculator(models.AbstractModel):
         """Hodinová sazba + fixní náklady rozpočítané na hodinu."""
         hourly_rate = float(config.get("hourly_rate", 800))
 
-        fixed_rent = float(config.get("fixed_rent_yearly", 0))
-        fixed_energy = float(config.get("fixed_energy_yearly", 0))
-        fixed_other = float(config.get("fixed_other_yearly", 0))
-        working_hours = float(config.get("working_hours_yearly", 2000))
+        fixed_costs_enabled = config.get("fixed_costs_enabled", "True")
+        fixed_per_hour = 0
 
-        fixed_total = fixed_rent + fixed_energy + fixed_other
-        fixed_per_hour = fixed_total / working_hours if working_hours else 0
+        if fixed_costs_enabled == "True":
+            fixed_rent = float(config.get("fixed_rent_yearly", 0))
+            fixed_energy = float(config.get("fixed_energy_yearly", 0))
+            fixed_other = float(config.get("fixed_other_yearly", 0))
+            working_hours = float(config.get("working_hours_yearly", 2000))
+
+            fixed_total = fixed_rent + fixed_energy + fixed_other
+            fixed_per_hour = fixed_total / working_hours if working_hours else 0
 
         return hourly_rate + fixed_per_hour
 
@@ -443,8 +471,14 @@ class LabelCalculator(models.AbstractModel):
             "admin_overhead_minutes": ICP.get_param(
                 "label_calc.admin_overhead_minutes", "15"
             ),
+            "amortization_enabled": ICP.get_param(
+                "label_calc.amortization_enabled", "True"
+            ),
+            "fixed_costs_enabled": ICP.get_param(
+                "label_calc.fixed_costs_enabled", "True"
+            ),
             "vat_surcharge_pct": ICP.get_param(
-                "label_calc.vat_surcharge_pct", "21"
+                "label_calc.vat_surcharge_pct", "15"
             ),
             "material_margin_pct": ICP.get_param(
                 "label_calc.material_margin_pct", "30"
