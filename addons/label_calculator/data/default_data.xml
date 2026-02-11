@@ -351,5 +351,24 @@
       <field name="purchase_ok" eval="False"/>
     </record>
 
+    <!-- ============ SLEVOVÉ HLADINY ============ -->
+    <record id="discount_tier_bronze" model="partner.discount.tier">
+      <field name="name">Bronzový</field>
+      <field name="min_spent">5000</field>
+      <field name="discount_pct">5</field>
+    </record>
+
+    <record id="discount_tier_silver" model="partner.discount.tier">
+      <field name="name">Stříbrný</field>
+      <field name="min_spent">20000</field>
+      <field name="discount_pct">10</field>
+    </record>
+
+    <record id="discount_tier_gold" model="partner.discount.tier">
+      <field name="name">Zlatý</field>
+      <field name="min_spent">50000</field>
+      <field name="discount_pct">15</field>
+    </record>
+
   </data>
 </odoo>

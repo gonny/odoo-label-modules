@@ -25,8 +25,11 @@
   <!-- ============ KONFIGURACE ============ -->
   <menuitem id="label_menu_config" name="Konfigurace" parent="label_menu_root" sequence="90"/>
 
+  <menuitem id="label_calculator_menu_discount_tiers" name="Zákaznické hladiny" parent="label_menu_config" action="action_partner_discount_tier" sequence="40"/>
+
   <menuitem id="label_menu_machines" name="Stroje" parent="label_menu_config" action="label_machine_action" sequence="10"/>
 
   <menuitem id="label_menu_settings" name="Nastavení" parent="label_menu_config" action="label_config_settings_action" sequence="99"/>
+
 
 </odoo>

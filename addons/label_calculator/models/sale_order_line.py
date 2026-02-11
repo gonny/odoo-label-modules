@@ -156,6 +156,18 @@ class SaleOrderLine(models.Model):
             else:
                 line.label_order_display = ""
 
+    # === Přidání auto discountu z partnerovy hladiny do kalkulace ===
+    @api.onchange("product_template_id", "label_material_id")
+    def _onchange_apply_partner_discount(self):
+        """Automaticky vyplní slevu z hladiny zákazníka."""
+        if (
+            self.pricing_type == "calculator"
+            and self.order_id.partner_id
+            and self.order_id.partner_id.label_effective_discount > 0
+        ):
+            self.discount = self.order_id.partner_id.label_effective_discount
+
+
     # === Onchange: výběr produktu ===
 
     @api.onchange("product_template_id")
@@ -241,8 +253,6 @@ class SaleOrderLine(models.Model):
 
         order_id = self.env.context.get("active_order_id")
         if not order_id:
-            # Fallback – zkus najít poslední draft objednávku
-            # pro stejného zákazníka
             partner = self.order_id.partner_id
             if partner:
                 draft_order = self.env["sale.order"].search(
@@ -288,6 +298,11 @@ class SaleOrderLine(models.Model):
             else [(5, 0, 0)]
         )
 
+        # Zjisti slevu zákazníka
+        discount = 0
+        if order.partner_id and order.partner_id.label_effective_discount > 0:
+            discount = order.partner_id.label_effective_discount
+
         vals = {
             "order_id": order.id,
             "product_id": self.product_id.id,
@@ -305,11 +320,11 @@ class SaleOrderLine(models.Model):
             ),
             "label_addon_ids": addon_ids,
             "label_is_repeat_design": True,
+            "discount": discount,
         }
 
         self.env["sale.order.line"].create(vals)
 
-        # Vrátit se na objednávku
         return {
             "type": "ir.actions.act_window",
             "res_model": "sale.order",
@@ -317,7 +332,6 @@ class SaleOrderLine(models.Model):
             "view_mode": "form",
             "target": "current",
         }
-
     # === Pomocné metody ===
 
     def _run_calculation(self):

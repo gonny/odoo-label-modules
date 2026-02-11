@@ -879,3 +879,352 @@ class TestLabelCalculator(TransactionCase):
             inv_line.price_unit,
             inv_line.label_material_cost_only,
         )
+
+      # ─────────────────────────────────────────────
+    # TEST 17: Zákaznické slevy – automatická hladina
+    # ─────────────────────────────────────────────
+    def test_17_discount_tier_auto(self):
+        """Ověření automatického přiřazení slevové hladiny."""
+        # Vytvoř slevové hladiny
+        tier_bronze = self.env["partner.discount.tier"].create({
+            "name": "Bronzový",
+            "min_spent": 5000,
+            "discount_pct": 5,
+        })
+        tier_silver = self.env["partner.discount.tier"].create({
+            "name": "Stříbrný",
+            "min_spent": 20000,
+            "discount_pct": 10,
+        })
+        tier_gold = self.env["partner.discount.tier"].create({
+            "name": "Zlatý",
+            "min_spent": 50000,
+            "discount_pct": 15,
+        })
+
+        # Vytvoř zákazníka
+        partner = self.env["res.partner"].create({
+            "name": "Test Zákazník Slevy",
+        })
+
+        # Bez útraty → žádná hladina
+        partner._compute_label_discount_tier()
+        self.assertFalse(partner.label_discount_tier_id)
+        self.assertEqual(partner.label_effective_discount, 0)
+
+        # Vytvoř produkt
+        product = self.env["product.template"].create({
+            "name": "Test Gravírovaný štítek",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        # Vytvoř objednávku za 6000 Kč → Bronze
+        order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+        })
+        line = self.env["sale.order.line"].create({
+            "order_id": order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 100,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+
+        # Potvrď objednávku
+        order.action_confirm()
+        self.assertEqual(order.state, "sale")
+
+        # Vytvoř a potvrď fakturu
+        invoice = order._create_invoices()
+        invoice.action_post()
+
+        # Přepočítej útratu
+        partner._compute_label_total_invoiced()
+        partner._compute_label_discount_tier()
+
+        _logger.info(
+            "TEST 17: Útrata=%.2f, Hladina=%s, Sleva=%.1f%%",
+            partner.label_total_invoiced,
+            partner.label_discount_tier_id.name if partner.label_discount_tier_id else "žádná",
+            partner.label_effective_discount,
+        )
+
+        # Útrata by měla být > 0
+        self.assertGreater(partner.label_total_invoiced, 0)
+
+        # Pokud útrata >= 5000 → Bronze
+        if partner.label_total_invoiced >= 5000:
+            self.assertEqual(
+                partner.label_discount_tier_id.id, tier_bronze.id
+            )
+            self.assertEqual(partner.label_effective_discount, 5)
+        else:
+            # Útrata < 5000 → žádná hladina
+            self.assertFalse(partner.label_discount_tier_id)
+
+    # ─────────────────────────────────────────────
+    # TEST 18: Zákaznické slevy – ruční přetížení
+    # ─────────────────────────────────────────────
+    def test_18_discount_manual_override(self):
+        """Ruční sleva přetíží automatickou hladinu."""
+        tier_bronze = self.env["partner.discount.tier"].create({
+            "name": "Bronzový",
+            "min_spent": 0,
+            "discount_pct": 5,
+        })
+
+        partner = self.env["res.partner"].create({
+            "name": "Test Override",
+        })
+
+        # Automatická sleva = Bronze 5%
+        partner._compute_label_discount_tier()
+        self.assertEqual(partner.label_discount_tier_id.id, tier_bronze.id)
+        self.assertEqual(partner.label_effective_discount, 5)
+
+        # Ruční přetížení na 12%
+        partner.write({"label_discount_override": 12})
+        partner._compute_label_effective_discount()
+        self.assertEqual(partner.label_effective_discount, 12)
+
+        # Ruční přetížení zpět na 0 → vrátí se automatická
+        partner.write({"label_discount_override": 0})
+        partner._compute_label_effective_discount()
+        self.assertEqual(partner.label_effective_discount, 5)
+
+        _logger.info("TEST 18: Ruční přetížení slevy ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 19: Zákaznické slevy – hladiny správně řazeny
+    # ─────────────────────────────────────────────
+    def test_19_discount_tier_ordering(self):
+        """Ověření, že se vybere nejvyšší dosažená hladina."""
+        tier_bronze = self.env["partner.discount.tier"].create({
+            "name": "Bronzový",
+            "min_spent": 100,
+            "discount_pct": 5,
+        })
+        tier_silver = self.env["partner.discount.tier"].create({
+            "name": "Stříbrný",
+            "min_spent": 500,
+            "discount_pct": 10,
+        })
+        tier_gold = self.env["partner.discount.tier"].create({
+            "name": "Zlatý",
+            "min_spent": 5000,
+            "discount_pct": 15,
+        })
+
+        partner = self.env["res.partner"].create({
+            "name": "Test Tier Ordering",
+        })
+
+        product = self.env["product.template"].create({
+            "name": "Test Tier Štítek",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        # Jedna objednávka – 50 ks koženky 30×20mm
+        # Tier "Do 100": margin 240%, pcs/hour 90
+        # Cena cca 15-20 Kč/ks → 50 × 15 = 750+ Kč → Silver (500+)
+        order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+        })
+        self.env["sale.order.line"].create({
+            "order_id": order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+        order.action_confirm()
+        invoice = order._create_invoices()
+        invoice.action_post()
+
+        # Přepočítej
+        partner._compute_label_total_invoiced()
+        partner._compute_label_discount_tier()
+        partner._compute_label_effective_discount()
+
+        _logger.info(
+            "TEST 19: Útrata=%.2f, Hladina=%s, Sleva=%.1f%%",
+            partner.label_total_invoiced,
+            partner.label_discount_tier_id.name
+            if partner.label_discount_tier_id else "žádná",
+            partner.label_effective_discount,
+        )
+
+        # Útrata musí být > 500 (Silver)
+        self.assertGreater(
+            partner.label_total_invoiced, 500,
+            f"Útrata {partner.label_total_invoiced} by měla být > 500"
+        )
+
+        # Musí být Silver (500 ≤ útrata < 5000)
+        self.assertEqual(
+            partner.label_discount_tier_id.id, tier_silver.id,
+            f"Očekáván Silver, útrata={partner.label_total_invoiced}"
+        )
+        self.assertEqual(partner.label_effective_discount, 10)
+
+        _logger.info(
+            "TEST 19: Útrata %.0f → Stříbrný (10%%) ✅",
+            partner.label_total_invoiced,
+        )
+
+
+    # ─────────────────────────────────────────────
+    # TEST 20: Zákaznické slevy – žádná hladina
+    # ─────────────────────────────────────────────
+    def test_20_discount_no_tier(self):
+        """Zákazník bez útraty → žádná sleva."""
+        partner = self.env["res.partner"].create({
+            "name": "Test Nový Zákazník",
+        })
+
+        partner._compute_label_total_invoiced()
+        partner._compute_label_discount_tier()
+        partner._compute_label_effective_discount()
+
+        self.assertEqual(partner.label_total_invoiced, 0)
+        self.assertFalse(partner.label_discount_tier_id)
+        self.assertEqual(partner.label_effective_discount, 0)
+        self.assertEqual(partner.label_discount_override, 0)
+
+        _logger.info("TEST 20: Nový zákazník → žádná sleva ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 21: Sleva se aplikuje na SO řádek
+    # ─────────────────────────────────────────────
+    def test_21_discount_applied_to_so_line(self):
+        """Ověření, že se sleva přenese na řádek objednávky."""
+        self.env["partner.discount.tier"].create({
+            "name": "Bronzový",
+            "min_spent": 0,
+            "discount_pct": 5,
+        })
+
+        partner = self.env["res.partner"].create({
+            "name": "Test SO Discount",
+        })
+
+        # Přepočítej – min_spent=0 → Bronze 5%
+        partner._compute_label_discount_tier()
+        partner._compute_label_effective_discount()
+        self.assertEqual(partner.label_effective_discount, 5)
+
+        product = self.env["product.template"].create({
+            "name": "Test Štítek",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+        })
+
+        line = self.env["sale.order.line"].create({
+            "order_id": order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 10,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+            "discount": partner.label_effective_discount,
+        })
+
+        # Sleva musí být 5%
+        self.assertEqual(line.discount, 5)
+
+        # Cena se slevou musí být nižší
+        price_without = line.price_unit * line.product_uom_qty
+        price_with = line.price_subtotal
+        self.assertLess(price_with, price_without)
+
+        # Rozdíl = 5%
+        expected_subtotal = price_without * (1 - 5 / 100)
+        self.assertAlmostEqual(price_with, expected_subtotal, places=2)
+
+        _logger.info(
+            "TEST 21: SO řádek – cena %.2f, sleva %s%%, subtotal %.2f ✅",
+            line.price_unit, line.discount, line.price_subtotal,
+        )
+
+    # ─────────────────────────────────────────────
+    # TEST 22: Fakturace – kompletní flow se slevou
+    # ─────────────────────────────────────────────
+    def test_22_invoice_flow_with_discount(self):
+        """SO → Potvrzení → Faktura – sleva se přenese."""
+        self.env["partner.discount.tier"].create({
+            "name": "Test Tier",
+            "min_spent": 0,
+            "discount_pct": 8,
+        })
+
+        partner = self.env["res.partner"].create({
+            "name": "Test Invoice Discount",
+        })
+        partner._compute_label_discount_tier()
+        partner._compute_label_effective_discount()
+
+        product = self.env["product.template"].create({
+            "name": "Test Štítek Faktura",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+        })
+
+        line = self.env["sale.order.line"].create({
+            "order_id": order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+            "discount": partner.label_effective_discount,
+        })
+
+        # Potvrď
+        order.action_confirm()
+        self.assertEqual(order.state, "sale")
+
+        # Fakturuj
+        invoice = order._create_invoices()
+        self.assertTrue(invoice)
+
+        # Ověř slevu na faktuře
+        inv_line = invoice.invoice_line_ids.filtered(
+            lambda l: l.product_id == product.product_variant_id
+        )
+        self.assertTrue(inv_line)
+        self.assertEqual(inv_line.discount, 8)
+
+        # Ověř kalkulační pole
+        self.assertEqual(
+            inv_line.label_material_id.id,
+            self.mat_leatherette.id,
+        )
+        self.assertTrue(inv_line.label_price_breakdown)
+
+        _logger.info(
+            "TEST 22: Faktura se slevou 8%% – cena %.2f, sleva %.0f%%, "
+            "materiál: %s ✅",
+            inv_line.price_unit,
+            inv_line.discount,
+            inv_line.label_material_id.name,
+        )
