@@ -1,0 +1,6 @@
+FROM odoo:19.0
+USER root
+# Install qifparse to a custom directory
+RUN pip3 install --break-system-packages qifparse
+RUN pip3 install --break-system-packages qrcode[pil]
+USER odoo

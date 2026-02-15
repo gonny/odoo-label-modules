@@ -1,5 +1,8 @@
 services:
   odoo:
+    build:
+      context: .
+      dockerfile: Dockerfile.odoo
     image: odoo:19
     container_name: odoo-label
     depends_on:

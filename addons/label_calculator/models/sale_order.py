@@ -1,4 +1,5 @@
 from odoo import models, fields, api
+from datetime import timedelta
 
 
 class SaleOrder(models.Model):
@@ -33,7 +34,7 @@ class SaleOrder(models.Model):
             order.label_partner_history_ids = lines
 
     def action_open_partner_history(self):
-        """Otevře historii zákazníka v standalone okně s groupby + kopírováním."""
+        """Otevře historii zákazníka v standalone okně s groupby."""
         self.ensure_one()
         if not self.partner_id:
             return
@@ -63,3 +64,13 @@ class SaleOrder(models.Model):
             },
             "target": "current",
         }
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Nastaví výchozí commitment_date (datum dodání)."""
+        for vals in vals_list:
+            if "commitment_date" not in vals:
+                # Výchozí datum dodání = dnes + 7 pracovních dní
+                today = fields.Date.context_today(self)
+                vals["commitment_date"] = today + timedelta(days=10)
+        return super().create(vals_list)

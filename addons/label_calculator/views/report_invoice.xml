@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="report_invoice_label_additions" inherit_id="account.report_invoice_document">
+
+    <!-- Přidat variabilní symbol -->
+    <xpath expr="//div[@name='payment_term']" position="after">
+      <div t-if="o.label_variable_symbol" class="mt-2">
+        <strong>Variabilní symbol: </strong>
+        <span t-field="o.label_variable_symbol"/>
+      </div>
+    </xpath>
+
+    <!-- Přidat QR kód -->
+    <xpath expr="//div[@name='comment']" position="after">
+      <div t-if="o._get_spd_string()" class="mt-3 text-center">
+        <p>
+          <strong>QR platba:</strong>
+        </p>
+        <img t-att-src="'/report/qr/?data=%s' % o._get_spd_string()" style="width: 150px; height: 150px;"/>
+        <p class="small text-muted mt-1">
+                    Naskenujte QR kód v bankovní aplikaci
+        </p>
+      </div>
+    </xpath>
+
+  </template>
+</odoo>
