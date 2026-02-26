@@ -342,15 +342,15 @@ class SaleOrderLine(models.Model):
         }
     # === Pomocné metody ===
 
-    def _convert_price_to_order_currency(self, czk_price):
-        """Convert price from company currency (CZK) to order currency.
+    def _convert_price_to_order_currency(self, company_price):
+        """Convert price from company currency to order currency.
 
         If the order uses the same currency as the company, returns the price
         unchanged. Otherwise uses Odoo's built-in currency conversion with
         the order date as reference.
 
         Args:
-            czk_price: Unit price in company currency (CZK).
+            company_price: Unit price in company currency.
 
         Returns:
             Price converted to the order's currency.
@@ -359,9 +359,9 @@ class SaleOrderLine(models.Model):
         company_currency = self.env.company.currency_id
         order_currency = self.order_id.currency_id
         if not order_currency or order_currency == company_currency:
-            return czk_price
+            return company_price
         return company_currency._convert(
-            czk_price,
+            company_price,
             order_currency,
             self.env.company,
             self.order_id.date_order or fields.Date.today(),

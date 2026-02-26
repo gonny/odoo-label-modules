@@ -1528,7 +1528,7 @@ class TestLabelCalculator(TransactionCase):
         self.assertEqual(lines[6], "CZ1234567890123456789012")
         self.assertTrue(lines[7].startswith("EUR"))
         # lines[10] = remittance text
-        self.assertIn("Faktura FV/2026/00010", lines[10])
+        self.assertIn("Invoice FV/2026/00010", lines[10])
 
         _logger.info("TEST 31: EPC format → %d lines ✅", len(lines))
 
@@ -1553,15 +1553,17 @@ class TestLabelCalculator(TransactionCase):
             return
 
         # Set EUR rate: 1 EUR = 25 CZK → rate = 0.04
-        eur_rate = self.env["res.currency.rate"].search(
-            [("currency_id", "=", eur.id)], limit=1,
-        )
+        eur_rate = self.env["res.currency.rate"].search([
+            ("currency_id", "=", eur.id),
+            ("company_id", "in", [company.id, False]),
+        ], limit=1)
         if eur_rate:
             eur_rate.rate = 0.04
         else:
             self.env["res.currency.rate"].create({
                 "currency_id": eur.id,
                 "rate": 0.04,
+                "company_id": company.id,
             })
 
         product = self.env["product.template"].create({
@@ -1616,7 +1618,7 @@ class TestLabelCalculator(TransactionCase):
         # price_unit should be approximately CZK_price / 25
         expected_eur = czk_price / 25.0
         self.assertAlmostEqual(
-            eur_line.price_unit, expected_eur, places=0,
+            eur_line.price_unit, expected_eur, places=2,
             msg="EUR price_unit should be ~CZK_price/25",
         )
 

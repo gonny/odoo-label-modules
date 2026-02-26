@@ -135,7 +135,7 @@ class AccountMove(models.Model):
         # Invoice reference for the payment message
         msg = ""
         if self.name and self.name != "/":
-            msg = f"Faktura {self.name}"
+            msg = f"Invoice {self.name}"
 
         # EPC QR format (newline-separated)
         lines = [

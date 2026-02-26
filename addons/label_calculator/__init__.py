@@ -44,12 +44,21 @@ def _post_init_configure(env):
     )
 
     # ── 4. Set profit/loss accounts on cash rounding records ──
+    # Odoo 19 uses account types like 'income_other' and 'expense'
     income_account = env["account.account"].sudo().search(
-        [("account_type", "=", "income")], limit=1,
+        [("account_type", "=", "income_other")], limit=1,
     )
+    if not income_account:
+        income_account = env["account.account"].sudo().search(
+            [("account_type", "ilike", "income")], limit=1,
+        )
     expense_account = env["account.account"].sudo().search(
         [("account_type", "=", "expense")], limit=1,
     )
+    if not expense_account:
+        expense_account = env["account.account"].sudo().search(
+            [("account_type", "ilike", "expense")], limit=1,
+        )
     if income_account or expense_account:
         roundings = env["account.cash.rounding"].sudo().search([])
         vals = {}
