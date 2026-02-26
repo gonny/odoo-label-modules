@@ -105,14 +105,75 @@ class AccountMove(models.Model):
 
         return "*".join(parts)
 
-    def _get_qr_code_base64(self):
-        """Return QR code image as base64-encoded PNG for the SPD string.
+    def _get_epc_string(self):
+        """Generate EPC QR code string for EUR SEPA payments.
 
-        Returns empty string if not a CZK invoice or qrcode is not installed.
+        EPC (European Payments Council) QR format is a newline-separated
+        standard for SEPA credit transfers, used by banking apps in the EU.
+
+        Returns empty string if not an EUR invoice or no EUR bank account found.
         """
         self.ensure_one()
-        spd = self._get_spd_string()
-        if not spd:
+
+        if self.currency_id.name != "EUR":
+            return ""
+
+        company = self.company_id
+        bank_account = company.partner_id.bank_ids.filtered(
+            lambda b: b.currency_id.name == "EUR"
+        )[:1]
+
+        if not bank_account:
+            return ""
+
+        iban = (bank_account.acc_number or "").replace(" ", "")
+        bic = (bank_account.bank_id.bic or "") if bank_account.bank_id else ""
+        # EPC standard: beneficiary name max 70 characters
+        beneficiary = (company.name or "")[:70]
+        amount = f"EUR{self.amount_residual:.2f}"
+
+        # Invoice reference for the payment message
+        msg = ""
+        if self.name and self.name != "/":
+            msg = f"Faktura {self.name}"
+
+        # EPC QR format (newline-separated)
+        lines = [
+            "BCD",       # Service Tag
+            "002",       # Version
+            "1",         # Character set (UTF-8)
+            "SCT",       # Identification code
+            bic,         # BIC of beneficiary bank (may be empty)
+            beneficiary, # Beneficiary name
+            iban,        # IBAN
+            amount,      # Amount (EUR + value)
+            "",          # Purpose (empty)
+            "",          # Remittance reference (empty)
+            msg,         # Remittance text
+        ]
+        return "\n".join(lines)
+
+    def _get_qr_code_base64(self):
+        """Return QR code image as base64-encoded PNG.
+
+        Generates QR code from:
+        - SPD format for CZK invoices (Czech domestic payments)
+        - EPC format for EUR invoices (SEPA payments)
+        - Empty string for other currencies
+
+        Returns empty string if qrcode package is not installed.
+        """
+        self.ensure_one()
+
+        # Determine QR data based on currency
+        if self.currency_id.name == "CZK":
+            qr_data = self._get_spd_string()
+        elif self.currency_id.name == "EUR":
+            qr_data = self._get_epc_string()
+        else:
+            return ""
+
+        if not qr_data:
             return ""
 
         try:
@@ -127,7 +188,7 @@ class AccountMove(models.Model):
             box_size=4,
             border=2,
         )
-        qr.add_data(spd)
+        qr.add_data(qr_data)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
 

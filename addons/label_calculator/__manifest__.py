@@ -35,7 +35,7 @@
         "views/report_invoice.xml",
         "views/menu.xml",
     ],
-    "post_init_hook": "_post_init_disable_default_sale_tax",
+    "post_init_hook": "_post_init_configure",
     "installable": True,
     "application": True,
     "auto_install": False,

@@ -1359,29 +1359,50 @@ class TestLabelCalculator(TransactionCase):
         _logger.info("TEST 26: QR code base64 length=%d ✅", len(qr_b64))
 
     # ─────────────────────────────────────────────
-    # TEST 27: QR code empty for non-CZK invoice
+    # TEST 27: EPC QR code for EUR invoice
     # ─────────────────────────────────────────────
-    def test_27_qr_code_non_czk(self):
-        """QR code is empty for EUR invoices."""
+    def test_27_epc_qr_code_eur(self):
+        """EPC QR code is generated for EUR invoices with bank account."""
+        company = self.env.company
         eur = self.env.ref("base.EUR", raise_if_not_found=False)
         if not eur:
             _logger.info("TEST 27: EUR currency not found, skipping")
             return
 
-        partner = self.env["res.partner"].create({"name": "EUR Test"})
+        eur.active = True
+        self.env["res.partner.bank"].create({
+            "acc_number": "CZ1234567890123456789012",
+            "partner_id": company.partner_id.id,
+            "currency_id": eur.id,
+        })
+
+        partner = self.env["res.partner"].create({"name": "EUR EPC Test"})
         move = self.env["account.move"].create({
             "move_type": "out_invoice",
             "partner_id": partner.id,
             "currency_id": eur.id,
         })
 
+        # SPD should be empty for EUR
         spd = move._get_spd_string()
         self.assertEqual(spd, "")
 
-        qr_b64 = move._get_qr_code_base64()
-        self.assertEqual(qr_b64, "")
+        # EPC should be generated
+        epc = move._get_epc_string()
+        self.assertIn("BCD", epc)
+        self.assertIn("SCT", epc)
+        self.assertIn("CZ1234567890123456789012", epc)
 
-        _logger.info("TEST 27: No QR for EUR invoice ✅")
+        try:
+            import qrcode  # noqa: F401
+        except ImportError:
+            _logger.info("TEST 27: qrcode not installed, skipping QR part")
+            return
+
+        qr_b64 = move._get_qr_code_base64()
+        self.assertTrue(qr_b64, "QR code should be generated for EUR invoice")
+
+        _logger.info("TEST 27: EPC QR for EUR invoice ✅")
 
     # ─────────────────────────────────────────────
     # TEST 28: Bank account auto-selection by currency
@@ -1442,3 +1463,164 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info("TEST 29: Auto cash rounding → %s ✅",
                       move.invoice_cash_rounding_id.name)
+
+    # ─────────────────────────────────────────────
+    # TEST 30: No QR for unsupported currencies
+    # ─────────────────────────────────────────────
+    def test_30_qr_code_unsupported_currency(self):
+        """QR code is empty for currencies other than CZK and EUR."""
+        usd = self.env.ref("base.USD", raise_if_not_found=False)
+        if not usd:
+            _logger.info("TEST 30: USD currency not found, skipping")
+            return
+
+        usd.active = True
+        partner = self.env["res.partner"].create({"name": "USD Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": usd.id,
+        })
+
+        self.assertEqual(move._get_spd_string(), "")
+        self.assertEqual(move._get_epc_string(), "")
+        self.assertEqual(move._get_qr_code_base64(), "")
+
+        _logger.info("TEST 30: No QR for USD invoice ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 31: EPC string format validation
+    # ─────────────────────────────────────────────
+    def test_31_epc_string_format(self):
+        """EPC string follows the correct newline-separated format."""
+        company = self.env.company
+        eur = self.env.ref("base.EUR", raise_if_not_found=False)
+        if not eur:
+            _logger.info("TEST 31: EUR currency not found, skipping")
+            return
+
+        eur.active = True
+        self.env["res.partner.bank"].create({
+            "acc_number": "CZ1234567890123456789012",
+            "partner_id": company.partner_id.id,
+            "currency_id": eur.id,
+        })
+
+        partner = self.env["res.partner"].create({"name": "EPC Format Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": eur.id,
+        })
+        move.name = "FV/2026/00010"
+        move._compute_variable_symbol()
+
+        epc = move._get_epc_string()
+        lines = epc.split("\n")
+
+        # EPC format: BCD, version 002, charset 1, SCT
+        self.assertEqual(lines[0], "BCD")
+        self.assertEqual(lines[1], "002")
+        self.assertEqual(lines[2], "1")
+        self.assertEqual(lines[3], "SCT")
+        # lines[4] = BIC (may be empty)
+        # lines[5] = beneficiary name
+        self.assertEqual(lines[6], "CZ1234567890123456789012")
+        self.assertTrue(lines[7].startswith("EUR"))
+        # lines[10] = remittance text
+        self.assertIn("Faktura FV/2026/00010", lines[10])
+
+        _logger.info("TEST 31: EPC format → %d lines ✅", len(lines))
+
+    # ─────────────────────────────────────────────
+    # TEST 32: Multi-currency price conversion on SO line
+    # ─────────────────────────────────────────────
+    def test_32_currency_conversion_on_so_line(self):
+        """Calculator price is converted to order currency (EUR)."""
+        eur = self.env.ref("base.EUR", raise_if_not_found=False)
+        if not eur:
+            _logger.info("TEST 32: EUR currency not found, skipping")
+            return
+
+        eur.active = True
+        company = self.env.company
+        company_currency = company.currency_id
+
+        # Ensure company currency is CZK (not EUR)
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not czk or company_currency == eur:
+            _logger.info("TEST 32: Company currency is not CZK, skipping")
+            return
+
+        # Set EUR rate: 1 EUR = 25 CZK → rate = 0.04
+        eur_rate = self.env["res.currency.rate"].search(
+            [("currency_id", "=", eur.id)], limit=1,
+        )
+        if eur_rate:
+            eur_rate.rate = 0.04
+        else:
+            self.env["res.currency.rate"].create({
+                "currency_id": eur.id,
+                "rate": 0.04,
+            })
+
+        product = self.env["product.template"].create({
+            "name": "Test Currency Product",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        partner = self.env["res.partner"].create({"name": "Currency Test"})
+
+        # CZK order – price should stay in CZK
+        czk_order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+        })
+        czk_line = self.env["sale.order.line"].create({
+            "order_id": czk_order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+        czk_price = czk_line.price_unit
+        czk_calc_price = czk_line.label_calculated_price
+
+        # label_calculated_price == price_unit for CZK (no conversion)
+        self.assertAlmostEqual(czk_price, czk_calc_price, places=2)
+        self.assertTrue(czk_price > 0, "CZK price should be > 0")
+
+        # EUR order – price_unit should be converted, label_calculated_price stays CZK
+        eur_order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+            "currency_id": eur.id,
+        })
+        eur_line = self.env["sale.order.line"].create({
+            "order_id": eur_order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+
+        # label_calculated_price stores CZK (same as CZK order)
+        self.assertAlmostEqual(
+            eur_line.label_calculated_price, czk_calc_price, places=2,
+            msg="label_calculated_price should be in CZK regardless of order currency",
+        )
+
+        # price_unit should be approximately CZK_price / 25
+        expected_eur = czk_price / 25.0
+        self.assertAlmostEqual(
+            eur_line.price_unit, expected_eur, places=0,
+            msg="EUR price_unit should be ~CZK_price/25",
+        )
+
+        _logger.info(
+            "TEST 32: CZK price=%.2f, EUR price=%.2f (expected ~%.2f) ✅",
+            czk_price, eur_line.price_unit, expected_eur,
+        )
