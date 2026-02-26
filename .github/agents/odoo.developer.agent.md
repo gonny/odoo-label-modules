@@ -116,3 +116,6 @@ As you're working in a local Docker environment, here are some useful commands f
 - Official Odoo Documentation: https://www.odoo.com/documentation/19.0/
 - Odoo Community Association (OCA) Guidelines
 - Python best practices and PEP standards
+
+Refer to the project's toolbox instructions for available commands:
+[toolbox.instructions.md](../instructions/toolbox.instructions.md)

@@ -1,6 +1,10 @@
-# CONTRIBUTING.md – Agent Context
+---
+description: Tools and commands for Odoo development, including best practices and common tasks.
+applyTo: '**/*'
+# applyTo: 'Describe when these instructions should be loaded' # when provided, instructions will automatically be added to the request context when the pattern matches an attached file
+---
 
-## Project: Odoo Label Calculator
+# Project: Odoo Label Calculator
 
 Custom Odoo 19 CE module for calculating prices of engraved labels 
 and textile tags. Self-hosted via Docker.
