@@ -106,6 +106,10 @@ class SaleOrderLine(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
+        # Skip recalculation when this write is triggered by a currency conversion
+        # update from SaleOrder.write() – the CZK price doesn't change, only price_unit
+        if self.env.context.get("label_currency_conversion_only"):
+            return res
         trigger_fields = {
             "label_material_id", "label_width_mm", "label_height_mm",
             "product_uom_qty", "label_is_repeat_design",

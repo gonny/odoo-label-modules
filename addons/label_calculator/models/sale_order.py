@@ -97,6 +97,9 @@ class SaleOrder(models.Model):
                     converted = line._convert_price_to_order_currency(
                         line.label_calculated_price,
                     )
-                    # Use super().write to avoid triggering our own write() again
-                    super(type(line), line).write({"price_unit": converted})
+                    # Use context flag to signal this is a currency-only update,
+                    # preventing unnecessary re-calculation in line.write()
+                    line.with_context(
+                        label_currency_conversion_only=True,
+                    ).write({"price_unit": converted})
         return res
