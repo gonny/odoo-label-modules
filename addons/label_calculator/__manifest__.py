@@ -18,6 +18,7 @@
         "product",
         "sale_management",
         "account",
+        "l10n_cz",
     ],
     "data": [
         "security/ir.model.access.csv",

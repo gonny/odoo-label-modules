@@ -2,17 +2,15 @@ from . import models
 
 
 def _post_init_configure(env):
-    """Post-install configuration for the label calculator module.
+    """Post-install configuration for label calculator module.
 
-    Configures Odoo for a Czech non-VAT-payer (neplátce DPH) business:
-    - Disables all default sale taxes
-    - Archives USD currency, activates EUR currency, sets CZK as default
-    - Enables cash rounding in Invoicing settings
-    - Sets profit/loss accounts on cash rounding records
+    Runs after l10n_cz is installed (it's in depends).
+    Company currency should already be CZK from l10n_cz.
     """
-    # ── 1. Disable default sale taxes ──
+
+    # ── Phase 1: Disable default sale tax (non-VAT-payer) ──
     env["ir.config_parameter"].sudo().set_param(
-        "account.default_sale_tax_id", "",
+        "account.default_sale_tax_id", False,
     )
     sale_taxes = env["account.tax"].sudo().search([
         ("type_tax_use", "=", "sale"),
@@ -21,50 +19,58 @@ def _post_init_configure(env):
     if sale_taxes:
         sale_taxes.write({"active": False})
 
-    # ── 2. Currency configuration: archive USD, activate EUR ──
-    usd = env.ref("base.USD", raise_if_not_found=False)
-    if usd:
-        usd.active = False
-
-    eur = env.ref("base.EUR", raise_if_not_found=False)
-    if eur:
-        eur.active = True
-
-    # Set CZK as default company currency
+    # ── Phase 2: Ensure CZK is company currency ──
     czk = env.ref("base.CZK", raise_if_not_found=False)
     if czk:
-        czk.active = True
-        company = env["res.company"].sudo().search([], limit=1)
-        if company and company.currency_id != czk:
-            company.currency_id = czk
+        czk.sudo().write({"active": True})
+        company = env.company.sudo()
+        if company.currency_id != czk:
+            company.write({"currency_id": czk.id})
 
-    # ── 3. Enable cash rounding in Invoicing settings ──
+    # ── Phase 3: Activate EUR, set rate, archive USD ──
+    eur = env.ref("base.EUR", raise_if_not_found=False)
+    if eur:
+        eur.sudo().write({"active": True})
+        # Set EUR rate: 1 EUR = 24 CZK → Odoo rate = 1/24
+        existing_rate = env["res.currency.rate"].sudo().search([
+            ("currency_id", "=", eur.id),
+        ], limit=1)
+        if existing_rate:
+            existing_rate.write({"rate": round(1 / 24, 6)})
+        else:
+            env["res.currency.rate"].sudo().create({
+                "currency_id": eur.id,
+                "rate": round(1 / 24, 6),
+            })
+
+    usd = env.ref("base.USD", raise_if_not_found=False)
+    if usd and usd.active:
+        company = env.company
+        if company.currency_id.name != "USD":
+            try:
+                usd.sudo().write({"active": False})
+            except Exception:
+                pass
+
+    # ── Phase 4: Enable cash rounding ──
     env["ir.config_parameter"].sudo().set_param(
         "account.use_invoice_cash_rounding", "True",
     )
 
-    # ── 4. Set profit/loss accounts on cash rounding records ──
-    # Odoo 19 uses account types like 'income_other' and 'expense'
+    # ── Phase 5: Set rounding accounts ──
     income_account = env["account.account"].sudo().search(
-        [("account_type", "=", "income_other")], limit=1,
+        [("account_type", "=", "income")], limit=1,
     )
-    if not income_account:
-        income_account = env["account.account"].sudo().search(
-            [("account_type", "ilike", "income")], limit=1,
-        )
     expense_account = env["account.account"].sudo().search(
         [("account_type", "=", "expense")], limit=1,
     )
-    if not expense_account:
-        expense_account = env["account.account"].sudo().search(
-            [("account_type", "ilike", "expense")], limit=1,
-        )
-    if income_account or expense_account:
+    if income_account and expense_account:
         roundings = env["account.cash.rounding"].sudo().search([])
-        vals = {}
-        if income_account:
-            vals["profit_account_id"] = income_account.id
-        if expense_account:
-            vals["loss_account_id"] = expense_account.id
-        if vals and roundings:
-            roundings.write(vals)
+        for rounding in roundings:
+            vals = {}
+            if not rounding.profit_account_id:
+                vals["profit_account_id"] = income_account.id
+            if not rounding.loss_account_id:
+                vals["loss_account_id"] = expense_account.id
+            if vals:
+                rounding.write(vals)
