@@ -8,7 +8,7 @@ def _post_init_disable_default_sale_tax(env):
     """
     # Remove default sale tax from account settings
     env["ir.config_parameter"].sudo().set_param(
-        "account.default_sale_tax_id", False,
+        "account.default_sale_tax_id", "",
     )
 
     # Deactivate all sale-type taxes so they don't appear in dropdowns

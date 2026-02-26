@@ -20,10 +20,10 @@
 
     <!-- QR payment code – only for CZK invoices with an amount -->
     <xpath expr="//div[@id='total']" position="after">
-      <div t-if="o.currency_id.name == 'CZK' and o._get_qr_code_base64()"
-           class="row mt-3 mb-3">
+      <t t-set="qr_data" t-value="o._get_qr_code_base64() if o.currency_id.name == 'CZK' else ''"/>
+      <div t-if="qr_data" class="row mt-3 mb-3">
         <div class="col-3 text-center">
-          <img t-att-src="'data:image/png;base64,' + o._get_qr_code_base64()"
+          <img t-att-src="'data:image/png;base64,' + qr_data"
                style="width:150px;height:150px;"
                alt="QR platba"/>
           <p class="small mt-1 mb-0"><strong>QR platba</strong></p>

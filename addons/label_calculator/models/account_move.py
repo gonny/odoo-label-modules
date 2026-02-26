@@ -132,5 +132,8 @@ class AccountMove(models.Model):
         img = qr.make_image(fill_color="black", back_color="white")
 
         buffer = io.BytesIO()
-        img.save(buffer, format="PNG")
-        return base64.b64encode(buffer.getvalue()).decode("ascii")
+        try:
+            img.save(buffer, format="PNG")
+            return base64.b64encode(buffer.getvalue()).decode("ascii")
+        finally:
+            buffer.close()
