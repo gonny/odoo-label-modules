@@ -110,6 +110,7 @@ def run(rpc):
     # Find default material
     tmpl_full = rpc.read("product.template", [tmpl["id"]],
                          ["label_default_material_id"])[0]
+    # XML-RPC returns Many2one fields as [id, name] tuples (or False)
     mat_id = tmpl_full["label_default_material_id"]
     if isinstance(mat_id, (list, tuple)):
         mat_id = mat_id[0]

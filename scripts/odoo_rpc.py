@@ -53,7 +53,7 @@ class OdooRPC:
             f"{self.url}/xmlrpc/2/object", allow_none=True,
         )
 
-        last_err = None
+        last_err: Exception = RuntimeError("Connection failed")
         for attempt in range(1, retries + 1):
             try:
                 self.uid = self._common.authenticate(
@@ -72,7 +72,7 @@ class OdooRPC:
                 file=sys.stderr,
             )
             time.sleep(delay)
-        raise last_err  # type: ignore[misc]
+        raise last_err
 
     # -- generic helpers ----------------------------------------------------
     def execute(self, model, method, *args, **kwargs):
@@ -127,7 +127,8 @@ class OdooRPC:
 
         Returns the invoice (account.move) id.
         """
-        # Odoo 19: _create_invoices returns recordset ids via RPC
+        # XML-RPC may return a single int or a list of ints depending
+        # on the Odoo version and number of invoices created.
         inv_ids = self.execute(
             "sale.order", "_create_invoices", [order_id],
         )
