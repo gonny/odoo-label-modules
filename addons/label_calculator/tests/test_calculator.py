@@ -1626,3 +1626,152 @@ class TestLabelCalculator(TransactionCase):
             "TEST 32: CZK price=%.2f, EUR price=%.2f (expected ~%.2f) ✅",
             czk_price, eur_line.price_unit, expected_eur,
         )
+
+    # ─────────────────────────────────────────────
+    # TEST 33: Currency change on existing order recalculates prices
+    # ─────────────────────────────────────────────
+    def test_33_currency_change_recalculates_price(self):
+        """Changing currency on a sale order converts price_unit for calculator lines."""
+        eur = self.env.ref("base.EUR", raise_if_not_found=False)
+        if not eur:
+            _logger.info("TEST 33: EUR currency not found, skipping")
+            return
+
+        eur.active = True
+        company = self.env.company
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not czk or company.currency_id == eur:
+            _logger.info("TEST 33: Company currency is not CZK, skipping")
+            return
+
+        # Set EUR rate: 1 EUR = 25 CZK
+        eur_rate = self.env["res.currency.rate"].search([
+            ("currency_id", "=", eur.id),
+            ("company_id", "in", [company.id, False]),
+        ], limit=1)
+        if eur_rate:
+            eur_rate.rate = 0.04
+        else:
+            self.env["res.currency.rate"].create({
+                "currency_id": eur.id,
+                "rate": 0.04,
+                "company_id": company.id,
+            })
+
+        product = self.env["product.template"].create({
+            "name": "Test CurrencyChange Product",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+        partner = self.env["res.partner"].create({"name": "CurrChange Test"})
+
+        # Create CZK order and add calculator line
+        order = self.env["sale.order"].create({"partner_id": partner.id})
+        line = self.env["sale.order.line"].create({
+            "order_id": order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+        czk_price = line.price_unit
+        czk_calc_price = line.label_calculated_price
+        self.assertTrue(czk_price > 0, "Initial CZK price should be > 0")
+
+        # Change order currency to EUR
+        order.write({"currency_id": eur.id})
+
+        # price_unit should now be converted; label_calculated_price unchanged
+        self.assertAlmostEqual(
+            line.label_calculated_price, czk_calc_price, places=2,
+            msg="label_calculated_price must not change when currency changes",
+        )
+        expected_eur = czk_price / 25.0
+        self.assertAlmostEqual(
+            line.price_unit, expected_eur, places=2,
+            msg="price_unit should be converted to EUR after currency change",
+        )
+
+        # Change back to CZK
+        order.write({"currency_id": czk.id})
+        self.assertAlmostEqual(
+            line.price_unit, czk_price, places=2,
+            msg="price_unit should return to CZK value after reverting currency",
+        )
+
+        _logger.info(
+            "TEST 33: CZK=%.2f → EUR=%.2f → CZK=%.2f ✅",
+            czk_price, expected_eur, line.price_unit,
+        )
+
+    # ─────────────────────────────────────────────
+    # TEST 34: Update Prices does not zero out calculator lines
+    # ─────────────────────────────────────────────
+    def test_34_update_prices_does_not_zero_calculator(self):
+        """_get_pricelist_price() returns converted calc price, not 0."""
+        company = self.env.company
+        eur = self.env.ref("base.EUR", raise_if_not_found=False)
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not eur or not czk or company.currency_id == eur:
+            _logger.info("TEST 34: Prerequisites not met, skipping")
+            return
+
+        eur.active = True
+        eur_rate = self.env["res.currency.rate"].search([
+            ("currency_id", "=", eur.id),
+            ("company_id", "in", [company.id, False]),
+        ], limit=1)
+        if eur_rate:
+            eur_rate.rate = 0.04
+        else:
+            self.env["res.currency.rate"].create({
+                "currency_id": eur.id,
+                "rate": 0.04,
+                "company_id": company.id,
+            })
+
+        product = self.env["product.template"].create({
+            "name": "Test UpdatePrices Product",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+        partner = self.env["res.partner"].create({"name": "UpdatePrices Test"})
+
+        eur_order = self.env["sale.order"].create({
+            "partner_id": partner.id,
+            "currency_id": eur.id,
+        })
+        line = self.env["sale.order.line"].create({
+            "order_id": eur_order.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+        self.assertTrue(line.price_unit > 0, "Initial EUR price should be > 0")
+
+        # Simulate "Update Prices" by calling _get_pricelist_price()
+        pricelist_price = line._get_pricelist_price()
+        self.assertTrue(
+            pricelist_price > 0,
+            "Update Prices should not return 0 for calculator lines",
+        )
+        # Should match the converted label_calculated_price
+        expected = line._convert_price_to_order_currency(
+            line.label_calculated_price,
+        )
+        self.assertAlmostEqual(
+            pricelist_price, expected, places=2,
+            msg="_get_pricelist_price should return converted calc price",
+        )
+
+        _logger.info(
+            "TEST 34: pricelist_price=%.4f (expected=%.4f) ✅",
+            pricelist_price, expected,
+        )

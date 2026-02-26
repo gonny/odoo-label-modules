@@ -118,6 +118,27 @@ class SaleOrderLine(models.Model):
                     line._recompute_label_fields()
         return res
 
+    def _get_pricelist_price(self):
+        """Return the pricelist price for this line.
+
+        For calculator lines that have been computed, return the stored CZK
+        price converted to the order currency instead of looking up the product
+        pricelist (which would return 0 because list_price = 0).
+
+        This ensures the "Update Prices" button does not zero out calculator lines.
+        Falls back to standard pricelist logic for non-calculator lines or when
+        no calculation has been performed yet.
+        """
+        if (
+            self.pricing_type == "calculator"
+            and self.label_calculated_price
+            and self.label_material_id
+        ):
+            return self._convert_price_to_order_currency(
+                self.label_calculated_price,
+            )
+        return super()._get_pricelist_price()
+
     def _recompute_label_fields(self):
         """Přepočítá kalkulační pole a uloží do DB."""
         self.ensure_one()

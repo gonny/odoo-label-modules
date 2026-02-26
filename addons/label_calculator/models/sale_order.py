@@ -74,3 +74,29 @@ class SaleOrder(models.Model):
                 today = fields.Date.context_today(self)
                 vals["commitment_date"] = today + timedelta(days=10)
         return super().create(vals_list)
+
+    def write(self, vals):
+        """Přepočítá kalkulační pole při změně měny nebo ceníku.
+
+        When the order currency or pricelist changes, all calculator lines
+        must have their price_unit re-converted to the new currency.
+        The label_calculated_price (CZK amount) stays unchanged.
+        """
+        res = super().write(vals)
+        if "currency_id" in vals or "pricelist_id" in vals:
+            for order in self:
+                calculator_lines = order.order_line.filtered(
+                    lambda l: (
+                        l.pricing_type == "calculator"
+                        and l.label_material_id
+                        and l.label_calculated_price
+                    )
+                )
+                for line in calculator_lines:
+                    # Only convert price – do NOT rerun calculator (CZK price stays)
+                    converted = line._convert_price_to_order_currency(
+                        line.label_calculated_price,
+                    )
+                    # Use super().write to avoid triggering our own write() again
+                    super(type(line), line).write({"price_unit": converted})
+        return res
