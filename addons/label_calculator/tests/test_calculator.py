@@ -1228,3 +1228,217 @@ class TestLabelCalculator(TransactionCase):
             inv_line.discount,
             inv_line.label_material_id.name,
         )
+
+    # ─────────────────────────────────────────────
+    # TEST 23: Variable symbol – basic computation
+    # ─────────────────────────────────────────────
+    def test_23_variable_symbol_basic(self):
+        """Variable symbol extracts digits from invoice name."""
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": self.env["res.partner"].create(
+                {"name": "VS Test"}
+            ).id,
+        })
+        # Draft invoice has name "/"
+        self.assertEqual(move.label_variable_symbol, "")
+
+        # Simulate a posted name
+        move.name = "INV/2026/00042"
+        move._compute_variable_symbol()
+        self.assertEqual(move.label_variable_symbol, "202600042")
+
+        _logger.info("TEST 23: Variable symbol INV/2026/00042 → %s ✅",
+                      move.label_variable_symbol)
+
+    # ─────────────────────────────────────────────
+    # TEST 24: Variable symbol – edge cases
+    # ─────────────────────────────────────────────
+    def test_24_variable_symbol_edge_cases(self):
+        """Variable symbol handles '/', empty, long numbers."""
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": self.env["res.partner"].create(
+                {"name": "VS Edge"}
+            ).id,
+        })
+
+        # "/" → empty
+        move.name = "/"
+        move._compute_variable_symbol()
+        self.assertEqual(move.label_variable_symbol, "")
+
+        # FV format
+        move.name = "FV/2026/00001"
+        move._compute_variable_symbol()
+        self.assertEqual(move.label_variable_symbol, "202600001")
+
+        # Long number → last 10 digits
+        move.name = "INV/20261234567890123"
+        move._compute_variable_symbol()
+        self.assertEqual(len(move.label_variable_symbol), 10)
+
+        _logger.info("TEST 24: Variable symbol edge cases ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 25: SPD string generation
+    # ─────────────────────────────────────────────
+    def test_25_spd_string(self):
+        """SPD string is generated for CZK invoices with bank account."""
+        company = self.env.company
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not czk:
+            _logger.info("TEST 25: CZK currency not found, skipping")
+            return
+
+        # Create a bank account for company
+        bank = self.env["res.partner.bank"].create({
+            "acc_number": "CZ6508000000192000145399",
+            "partner_id": company.partner_id.id,
+            "currency_id": czk.id,
+        })
+
+        partner = self.env["res.partner"].create({"name": "SPD Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": czk.id,
+        })
+        move.name = "FV/2026/00001"
+        move._compute_variable_symbol()
+
+        spd = move._get_spd_string()
+        self.assertIn("SPD*1.0", spd)
+        self.assertIn("ACC:CZ6508000000192000145399", spd)
+        self.assertIn("CC:CZK", spd)
+        self.assertIn("X-VS:202600001", spd)
+
+        _logger.info("TEST 25: SPD string → %s ✅", spd[:60])
+
+    # ─────────────────────────────────────────────
+    # TEST 26: QR code base64 generation
+    # ─────────────────────────────────────────────
+    def test_26_qr_code_base64(self):
+        """QR code base64 is returned for CZK invoices."""
+        company = self.env.company
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not czk:
+            _logger.info("TEST 26: CZK currency not found, skipping")
+            return
+
+        self.env["res.partner.bank"].create({
+            "acc_number": "CZ6508000000192000145399",
+            "partner_id": company.partner_id.id,
+            "currency_id": czk.id,
+        })
+
+        partner = self.env["res.partner"].create({"name": "QR Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": czk.id,
+        })
+        move.name = "FV/2026/00001"
+        move._compute_variable_symbol()
+
+        try:
+            import qrcode  # noqa: F401
+        except ImportError:
+            _logger.info("TEST 26: qrcode not installed, skipping")
+            return
+
+        qr_b64 = move._get_qr_code_base64()
+        self.assertTrue(qr_b64, "QR code base64 should not be empty")
+        # Verify it's valid base64
+        import base64
+        decoded = base64.b64decode(qr_b64)
+        # PNG starts with \x89PNG
+        self.assertTrue(decoded[:4] == b"\x89PNG",
+                        "QR code should be a valid PNG image")
+
+        _logger.info("TEST 26: QR code base64 length=%d ✅", len(qr_b64))
+
+    # ─────────────────────────────────────────────
+    # TEST 27: QR code empty for non-CZK invoice
+    # ─────────────────────────────────────────────
+    def test_27_qr_code_non_czk(self):
+        """QR code is empty for EUR invoices."""
+        eur = self.env.ref("base.EUR", raise_if_not_found=False)
+        if not eur:
+            _logger.info("TEST 27: EUR currency not found, skipping")
+            return
+
+        partner = self.env["res.partner"].create({"name": "EUR Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": eur.id,
+        })
+
+        spd = move._get_spd_string()
+        self.assertEqual(spd, "")
+
+        qr_b64 = move._get_qr_code_base64()
+        self.assertEqual(qr_b64, "")
+
+        _logger.info("TEST 27: No QR for EUR invoice ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 28: Bank account auto-selection by currency
+    # ─────────────────────────────────────────────
+    def test_28_bank_account_auto_select(self):
+        """Invoice create auto-selects company bank account by currency."""
+        company = self.env.company
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not czk:
+            _logger.info("TEST 28: CZK currency not found, skipping")
+            return
+
+        bank_czk = self.env["res.partner.bank"].create({
+            "acc_number": "CZ6508000000192000145399",
+            "partner_id": company.partner_id.id,
+            "currency_id": czk.id,
+        })
+
+        partner = self.env["res.partner"].create({"name": "Bank Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": czk.id,
+        })
+
+        self.assertEqual(move.partner_bank_id.id, bank_czk.id,
+                         "Bank account should be auto-selected by currency")
+
+        _logger.info("TEST 28: Auto bank selection → %s ✅",
+                      move.partner_bank_id.acc_number)
+
+    # ─────────────────────────────────────────────
+    # TEST 29: Cash rounding auto-set
+    # ─────────────────────────────────────────────
+    def test_29_cash_rounding_auto_set(self):
+        """Invoice create auto-sets cash rounding by currency name."""
+        czk = self.env.ref("base.CZK", raise_if_not_found=False)
+        if not czk:
+            _logger.info("TEST 29: CZK currency not found, skipping")
+            return
+
+        rounding_czk = self.env["account.cash.rounding"].create({
+            "name": "CZK test rounding",
+            "rounding": 1.0,
+            "strategy": "add_invoice_line",
+            "rounding_method": "HALF-UP",
+        })
+
+        partner = self.env["res.partner"].create({"name": "Rounding Test"})
+        move = self.env["account.move"].create({
+            "move_type": "out_invoice",
+            "partner_id": partner.id,
+            "currency_id": czk.id,
+        })
+
+        self.assertTrue(move.invoice_cash_rounding_id,
+                        "Cash rounding should be auto-set")
+
+        _logger.info("TEST 29: Auto cash rounding → %s ✅",
+                      move.invoice_cash_rounding_id.name)

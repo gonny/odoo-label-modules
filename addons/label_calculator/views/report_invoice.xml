@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ============================================================
+       Invoice PDF: add variable symbol + QR payment code
+       Inherits from account.report_invoice_document
+       ============================================================ -->
+
+  <template id="report_invoice_label"
+            inherit_id="account.report_invoice_document"
+            priority="99">
+
+    <!-- Variable symbol – shown after payment reference in informations block -->
+    <xpath expr="//div[@id='informations']" position="inside">
+      <div t-if="o.label_variable_symbol" class="col-auto col-3 mw-100 mb-2">
+        <strong>Variabilní symbol:</strong>
+        <p class="m-0" t-field="o.label_variable_symbol"/>
+      </div>
+    </xpath>
+
+    <!-- QR payment code – only for CZK invoices with an amount -->
+    <xpath expr="//div[@id='total']" position="after">
+      <div t-if="o.currency_id.name == 'CZK' and o._get_qr_code_base64()"
+           class="row mt-3 mb-3">
+        <div class="col-3 text-center">
+          <img t-att-src="'data:image/png;base64,' + o._get_qr_code_base64()"
+               style="width:150px;height:150px;"
+               alt="QR platba"/>
+          <p class="small mt-1 mb-0"><strong>QR platba</strong></p>
+        </div>
+      </div>
+    </xpath>
+
+  </template>
+
+</odoo>

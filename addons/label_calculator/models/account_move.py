@@ -1,4 +1,6 @@
 from odoo import models, fields, api
+import base64
+import io
 import re
 import logging
 
@@ -27,32 +29,41 @@ class AccountMove(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        """Nastaví výchozí cash rounding podle měny faktury."""
+        """Auto-set cash rounding and bank account by invoice currency."""
         for vals in vals_list:
+            currency_id = vals.get("currency_id")
+            if not currency_id:
+                currency_id = self.env.company.currency_id.id
+
+            currency = self.env["res.currency"].browse(currency_id)
+
+            # ── Phase 3: Cash rounding by currency ──
             if "invoice_cash_rounding_id" not in vals:
-                # Zjisti měnu faktury
-                currency_id = vals.get("currency_id")
-                if not currency_id:
-                    # Fallback na měnu společnosti
-                    currency_id = self.env.company.currency_id.id
-
-                currency = self.env["res.currency"].browse(currency_id)
-
-                # Najdi cash rounding pro tuto měnu
-                # Hledáme podle názvu (konvence: "CZK ..." nebo "EUR ...")
                 rounding = self.env["account.cash.rounding"].search(
                     [("name", "ilike", currency.name)],
                     limit=1,
                 )
-
-                # Fallback – první dostupný
                 if not rounding:
                     rounding = self.env["account.cash.rounding"].search(
                         [], limit=1
                     )
-
                 if rounding:
                     vals["invoice_cash_rounding_id"] = rounding.id
+
+            # ── Phase 4: Bank account by currency ──
+            if "partner_bank_id" not in vals:
+                company_partner = self.env.company.partner_id
+                bank = company_partner.bank_ids.filtered(
+                    lambda b: b.currency_id == currency
+                    or (
+                        not b.currency_id
+                        and currency == self.env.company.currency_id
+                    )
+                )[:1]
+                if not bank:
+                    bank = company_partner.bank_ids[:1]
+                if bank:
+                    vals["partner_bank_id"] = bank.id
 
         return super().create(vals_list)
 
@@ -93,3 +104,33 @@ class AccountMove(models.Model):
             parts.append(f"MSG:Faktura {self.name}")
 
         return "*".join(parts)
+
+    def _get_qr_code_base64(self):
+        """Return QR code image as base64-encoded PNG for the SPD string.
+
+        Returns empty string if not a CZK invoice or qrcode is not installed.
+        """
+        self.ensure_one()
+        spd = self._get_spd_string()
+        if not spd:
+            return ""
+
+        try:
+            import qrcode
+        except ImportError:
+            _logger.warning("qrcode package not installed – QR code skipped")
+            return ""
+
+        qr = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=4,
+            border=2,
+        )
+        qr.add_data(spd)
+        qr.make(fit=True)
+        img = qr.make_image(fill_color="black", back_color="white")
+
+        buffer = io.BytesIO()
+        img.save(buffer, format="PNG")
+        return base64.b64encode(buffer.getvalue()).decode("ascii")
