@@ -88,14 +88,25 @@ class OdooRPC:
         return self.execute(model, "search", domain, **kw)
 
     def read(self, model, ids, fields=None):
-        return self.execute(model, "read", ids, {"fields": fields or []})
+        if self.uid is None:
+            raise RuntimeError("Not connected")
+        return self._object.execute_kw(
+            self.db, self.uid, self.password,
+            model, "read", [ids], {"fields": fields or []},
+        )
 
     def search_read(self, model, domain, fields=None, **kw):
         kw["fields"] = fields or []
         return self.execute(model, "search_read", domain, **kw)
 
     def create(self, model, vals):
-        return self.execute(model, "create", [vals])
+        result = self.execute(model, "create", [vals])
+        # Odoo 19 @api.model_create_multi returns a list of IDs when the
+        # input is a list (even for a single record).  Unwrap it so callers
+        # always receive a plain integer for a single-create call.
+        if isinstance(result, list):
+            return result[0] if len(result) == 1 else result
+        return result
 
     def write(self, model, ids, vals):
         return self.execute(model, "write", ids, vals)
@@ -105,17 +116,20 @@ class OdooRPC:
         """Create a quotation with optional *lines*.
 
         Each element of *lines* is a dict with keys accepted by
-        ``sale.order.line.create`` (at minimum ``product_id``).
+        ``sale.order.line`` (at minimum ``product_id``).
+
+        Lines are embedded in the order's ``create`` call using the Odoo
+        one2many command ``(0, 0, vals)`` so that ``order_id`` is properly
+        set when Odoo computes precomputed fields such as ``name`` during
+        record creation.  Creating lines in a separate RPC call raises
+        ``ValueError: Expected singleton: sale.order()`` in Odoo 19.
+
         Returns the new sale order id.
         """
-        order_id = self.create("sale.order", {
-            "partner_id": partner_id,
-        })
+        order_vals = {"partner_id": partner_id}
         if lines:
-            for vals in lines:
-                vals["order_id"] = order_id
-                self.create("sale.order.line", vals)
-        return order_id
+            order_vals["order_line"] = [(0, 0, vals) for vals in lines]
+        return self.create("sale.order", order_vals)
 
     def confirm_sale_order(self, order_id):
         """Confirm a sale order (quotation → sale)."""
@@ -125,16 +139,38 @@ class OdooRPC:
     def create_invoice_from_sale(self, order_id):
         """Create and post an invoice from a confirmed sale order.
 
-        Returns the invoice (account.move) id.
+        Uses the ``sale.advance.payment.inv`` wizard (the public API for
+        creating invoices from sale orders).  The private ``_create_invoices``
+        method cannot be called remotely in Odoo 19.
+
+        ``create_invoices`` returns an action dict that may contain ``None``
+        values.  Odoo's XML-RPC marshaller runs with ``allow_none=False``, so
+        the response serialisation raises a Fault even though the invoices
+        were created successfully.  We catch that Fault and locate the invoice
+        by reading ``invoice_ids`` from the sale order.
+
+        Returns the invoice (account.move) id, or None if not found.
         """
-        # XML-RPC may return a single int or a list of ints depending
-        # on the Odoo version and number of invoices created.
-        inv_ids = self.execute(
-            "sale.order", "_create_invoices", [order_id],
-        )
-        if isinstance(inv_ids, list):
-            return inv_ids[0] if inv_ids else None
-        return inv_ids
+        wizard_id = self.create("sale.advance.payment.inv", {
+            "advance_payment_method": "delivered",
+            "sale_order_ids": [(6, 0, [order_id])],
+        })
+        try:
+            self.execute(
+                "sale.advance.payment.inv", "create_invoices", [wizard_id],
+            )
+        except xmlrpc.client.Fault as exc:
+            # The action dict returned by create_invoices may contain None
+            # values that Odoo's XML-RPC serializer (allow_none=False) cannot
+            # marshal.  The invoices are created before serialization, so we
+            # ignore this specific error and read the invoice from the order.
+            if "cannot marshal None" not in str(exc):
+                raise
+        # Find the invoice created for this order
+        order_data = self.read("sale.order", [order_id], ["invoice_ids"])
+        if order_data and order_data[0].get("invoice_ids"):
+            return order_data[0]["invoice_ids"][0]
+        return None
 
     def read_invoice(self, invoice_id, fields=None):
         """Read invoice fields."""
