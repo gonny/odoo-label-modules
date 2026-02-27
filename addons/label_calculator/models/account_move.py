@@ -40,12 +40,20 @@ class AccountMove(models.Model):
             # ── Phase 3: Cash rounding by currency ──
             if "invoice_cash_rounding_id" not in vals:
                 rounding = self.env["account.cash.rounding"].search(
-                    [("name", "ilike", currency.name)],
+                    [
+                        ("name", "ilike", currency.name),
+                        ("profit_account_id", "!=", False),
+                        ("loss_account_id", "!=", False),
+                    ],
                     limit=1,
                 )
                 if not rounding:
                     rounding = self.env["account.cash.rounding"].search(
-                        [], limit=1
+                        [
+                            ("profit_account_id", "!=", False),
+                            ("loss_account_id", "!=", False),
+                        ],
+                        limit=1,
                     )
                 if rounding:
                     vals["invoice_cash_rounding_id"] = rounding.id

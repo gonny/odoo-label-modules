@@ -220,6 +220,30 @@ class TestLabelCalculator(TransactionCase):
         # Kalkulátor
         cls.calc = cls.env["label.calculator"]
 
+        # === Cash rounding – nastavení účtů ===
+        # Odoo 19 requires profit_account_id and loss_account_id on
+        # account.cash.rounding records to create rounding journal lines when
+        # posting invoices. Ensure all existing records have these accounts set.
+        profit_account = cls.env["account.account"].search(
+            [
+                ("account_type", "in", ["income", "income_other"]),
+                ("company_ids", "in", [cls.env.company.id]),
+            ],
+            limit=1,
+        )
+        loss_account = cls.env["account.account"].search(
+            [
+                ("account_type", "in", ["expense", "expense_other"]),
+                ("company_ids", "in", [cls.env.company.id]),
+            ],
+            limit=1,
+        )
+        if profit_account and loss_account:
+            cls.env["account.cash.rounding"].search([]).write({
+                "profit_account_id": profit_account.id,
+                "loss_account_id": loss_account.id,
+            })
+
     # ─────────────────────────────────────────────
     # TEST 01: Základní výpočet – koženka area
     # ─────────────────────────────────────────────
@@ -1291,9 +1315,12 @@ class TestLabelCalculator(TransactionCase):
             _logger.info("TEST 25: CZK currency not found, skipping")
             return
 
-        # Create a bank account for company
-        bank = self.env["res.partner.bank"].create({
-            "acc_number": "CZ6508000000192000145399",
+        # Get or create a CZK bank account for company (seed data may already have it)
+        bank = self.env["res.partner.bank"].search([
+            ("sanitized_acc_number", "=", "CZ6855000000001036133686"),
+            ("partner_id", "=", company.partner_id.id),
+        ], limit=1) or self.env["res.partner.bank"].create({
+            "acc_number": "CZ6855000000001036133686",
             "partner_id": company.partner_id.id,
             "currency_id": czk.id,
         })
@@ -1309,7 +1336,7 @@ class TestLabelCalculator(TransactionCase):
 
         spd = move._get_spd_string()
         self.assertIn("SPD*1.0", spd)
-        self.assertIn("ACC:CZ6508000000192000145399", spd)
+        self.assertIn("ACC:CZ6855000000001036133686", spd)
         self.assertIn("CC:CZK", spd)
         self.assertIn("X-VS:202600001", spd)
 
@@ -1326,8 +1353,11 @@ class TestLabelCalculator(TransactionCase):
             _logger.info("TEST 26: CZK currency not found, skipping")
             return
 
-        self.env["res.partner.bank"].create({
-            "acc_number": "CZ6508000000192000145399",
+        self.env["res.partner.bank"].search([
+            ("sanitized_acc_number", "=", "CZ6855000000001036133686"),
+            ("partner_id", "=", company.partner_id.id),
+        ], limit=1) or self.env["res.partner.bank"].create({
+            "acc_number": "CZ6855000000001036133686",
             "partner_id": company.partner_id.id,
             "currency_id": czk.id,
         })
@@ -1370,8 +1400,11 @@ class TestLabelCalculator(TransactionCase):
             return
 
         eur.active = True
-        self.env["res.partner.bank"].create({
-            "acc_number": "CZ1234567890123456789012",
+        self.env["res.partner.bank"].search([
+            ("sanitized_acc_number", "=", "CZ2855000000001036152545"),
+            ("partner_id", "=", company.partner_id.id),
+        ], limit=1) or self.env["res.partner.bank"].create({
+            "acc_number": "CZ2855000000001036152545",
             "partner_id": company.partner_id.id,
             "currency_id": eur.id,
         })
@@ -1391,7 +1424,7 @@ class TestLabelCalculator(TransactionCase):
         epc = move._get_epc_string()
         self.assertIn("BCD", epc)
         self.assertIn("SCT", epc)
-        self.assertIn("CZ1234567890123456789012", epc)
+        self.assertIn("CZ2855000000001036152545", epc)
 
         try:
             import qrcode  # noqa: F401
@@ -1415,11 +1448,17 @@ class TestLabelCalculator(TransactionCase):
             _logger.info("TEST 28: CZK currency not found, skipping")
             return
 
-        bank_czk = self.env["res.partner.bank"].create({
-            "acc_number": "CZ6508000000192000145399",
-            "partner_id": company.partner_id.id,
-            "currency_id": czk.id,
-        })
+        bank_czk = (
+            self.env["res.partner.bank"].search([
+                ("sanitized_acc_number", "=", "CZ6855000000001036133686"),
+                ("partner_id", "=", company.partner_id.id),
+            ], limit=1)
+            or self.env["res.partner.bank"].create({
+                "acc_number": "CZ6855000000001036133686",
+                "partner_id": company.partner_id.id,
+                "currency_id": czk.id,
+            })
+        )
 
         partner = self.env["res.partner"].create({"name": "Bank Test"})
         move = self.env["account.move"].create({
@@ -1500,8 +1539,11 @@ class TestLabelCalculator(TransactionCase):
             return
 
         eur.active = True
-        self.env["res.partner.bank"].create({
-            "acc_number": "CZ1234567890123456789012",
+        self.env["res.partner.bank"].search([
+            ("sanitized_acc_number", "=", "CZ2855000000001036152545"),
+            ("partner_id", "=", company.partner_id.id),
+        ], limit=1) or self.env["res.partner.bank"].create({
+            "acc_number": "CZ2855000000001036152545",
             "partner_id": company.partner_id.id,
             "currency_id": eur.id,
         })
@@ -1525,7 +1567,7 @@ class TestLabelCalculator(TransactionCase):
         self.assertEqual(lines[3], "SCT")
         # lines[4] = BIC (may be empty)
         # lines[5] = beneficiary name
-        self.assertEqual(lines[6], "CZ1234567890123456789012")
+        self.assertEqual(lines[6], "CZ2855000000001036152545")
         self.assertTrue(lines[7].startswith("EUR"))
         # lines[10] = remittance text
         self.assertIn("Invoice FV/2026/00010", lines[10])
@@ -1596,10 +1638,12 @@ class TestLabelCalculator(TransactionCase):
         self.assertTrue(czk_price > 0, "CZK price should be > 0")
 
         # EUR order – price_unit should be converted, label_calculated_price stays CZK
+        # Note: sale.order.currency_id is a stored computed field (from pricelist_id)
+        # in Odoo 19 and must be set via write() after creation to take effect.
         eur_order = self.env["sale.order"].create({
             "partner_id": partner.id,
-            "currency_id": eur.id,
         })
+        eur_order.write({"currency_id": eur.id})
         eur_line = self.env["sale.order.line"].create({
             "order_id": eur_order.id,
             "product_id": product.product_variant_id.id,
