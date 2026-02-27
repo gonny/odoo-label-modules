@@ -1,6 +1,6 @@
 ---
 description: Tools and commands for Odoo development, including best practices and common tasks.
-applyTo: '**/*'
+applyTo: '**/*.py'
 # applyTo: 'Describe when these instructions should be loaded' # when provided, instructions will automatically be added to the request context when the pattern matches an attached file
 ---
 
@@ -24,34 +24,13 @@ and textile tags. Self-hosted via Docker.
 - `groups="account.group_account_basic"` does NOT exist in Community
 
 ## Development Commands
-```bash
-# Start environment
-docker compose up -d
+- `make test` must pass (all unit tests) after every change
+- `make reset` must work (clean install) after every change
+- `make smoke` must pass (E2E flow) after every change
+- Bank accounts in tests: search for existing before creating (avoid duplicate IBAN errors)
+- Cash rounding in tests: ensure profit/loss accounts are set
 
-# Run tests
-docker compose stop odoo
-docker compose run --rm odoo odoo \
-    -d odoo_label \
-    -u label_calculator \
-    --test-tags /label_calculator \
-    --stop-after-init
-docker compose start odoo
-
-# Reset database
-docker compose down
-docker volume rm odoo-label-db odoo-label-data
-docker compose up -d
-# Then install module via UI or CLI
-
-# Update module (no DB reset)
-docker compose exec odoo odoo \
-    -u label_calculator \
-    -d odoo_label \
-    --stop-after-init
-docker compose restart odoo
-
-# Odoo shell (interactive Python)
-docker compose exec odoo odoo shell -d odoo_label
+Document covering additional details is in [CONTRIBUTING.md](./../../CONTRIBUTING.md) specification.
 
 # API access (XML-RPC)
 # URL: http://localhost:8069
@@ -108,3 +87,11 @@ addons/label_calculator/
 - Rounding: math.ceil(price * 10) / 10 (always up to 10 haléřů)
 - Addon materials (is_addon=True): only material cost, no labor
 - Time addons: seconds × machine hourly_amortization / 3600
+
+## Makefile Commands
+- available in [Makefile](./../../Makefile) for common tasks:
+  - `make install` – install dependencies
+  - `make up` – start Odoo and PostgreSQL via Docker Compose
+  - `make test` – run unit tests
+  - `make reset` – reset database and install module
+  - `make smoke` – run E2E smoke tests

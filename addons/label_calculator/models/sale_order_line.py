@@ -106,6 +106,10 @@ class SaleOrderLine(models.Model):
 
     def write(self, vals):
         res = super().write(vals)
+        # Skip recalculation when this write is triggered by a currency conversion
+        # update from SaleOrder.write() – the CZK price doesn't change, only price_unit
+        if self.env.context.get("label_currency_conversion_only"):
+            return res
         trigger_fields = {
             "label_material_id", "label_width_mm", "label_height_mm",
             "product_uom_qty", "label_is_repeat_design",
@@ -118,6 +122,27 @@ class SaleOrderLine(models.Model):
                     line._recompute_label_fields()
         return res
 
+    def _get_pricelist_price(self):
+        """Return the pricelist price for this line.
+
+        For calculator lines that have been computed, return the stored CZK
+        price converted to the order currency instead of looking up the product
+        pricelist (which would return 0 because list_price = 0).
+
+        This ensures the "Update Prices" button does not zero out calculator lines.
+        Falls back to standard pricelist logic for non-calculator lines or when
+        no calculation has been performed yet.
+        """
+        if (
+            self.pricing_type == "calculator"
+            and self.label_calculated_price
+            and self.label_material_id
+        ):
+            return self._convert_price_to_order_currency(
+                self.label_calculated_price,
+            )
+        return super()._get_pricelist_price()
+
     def _recompute_label_fields(self):
         """Přepočítá kalkulační pole a uloží do DB."""
         self.ensure_one()
@@ -129,10 +154,14 @@ class SaleOrderLine(models.Model):
             return
 
         vals = {
+            # label_calculated_price always stores CZK value
             "label_calculated_price": result["unit_price"],
             "label_material_cost_only": result.get("material_cost_only", 0),
             "label_price_breakdown": self._format_breakdown(result),
-            "price_unit": result["unit_price"],
+            # price_unit stores value in order currency (converted if needed)
+            "price_unit": self._convert_price_to_order_currency(
+                result["unit_price"],
+            ),
         }
 
         desc = self._get_label_description()
@@ -236,8 +265,12 @@ class SaleOrderLine(models.Model):
         if not result:
             return
 
+        # label_calculated_price always stores CZK value (original calculation)
         self.label_calculated_price = result["unit_price"]
-        self.price_unit = result["unit_price"]
+        # price_unit stores value in order currency (converted if needed)
+        self.price_unit = self._convert_price_to_order_currency(
+            result["unit_price"],
+        )
         self.label_material_cost_only = result.get("material_cost_only", 0)
         self.label_price_breakdown = self._format_breakdown(result)
 
@@ -333,6 +366,31 @@ class SaleOrderLine(models.Model):
             "target": "current",
         }
     # === Pomocné metody ===
+
+    def _convert_price_to_order_currency(self, company_price):
+        """Convert price from company currency to order currency.
+
+        If the order uses the same currency as the company, returns the price
+        unchanged. Otherwise uses Odoo's built-in currency conversion with
+        the order date as reference.
+
+        Args:
+            company_price: Unit price in company currency.
+
+        Returns:
+            Price converted to the order's currency.
+        """
+        self.ensure_one()
+        company_currency = self.env.company.currency_id
+        order_currency = self.order_id.currency_id
+        if not order_currency or order_currency == company_currency:
+            return company_price
+        return company_currency._convert(
+            company_price,
+            order_currency,
+            self.env.company,
+            self.order_id.date_order or fields.Date.today(),
+        )
 
     def _run_calculation(self):
         addon_ids = []

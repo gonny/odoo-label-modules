@@ -1,299 +1,49 @@
 ---
 name: python-oddo-skills
-description: Key skills and patterns for developing Odoo 19 modules in Python.
-
+description: This skill is errata for common pitfalls and differences in Odoo 19, not a tutorial.
 ---
 This document outlines key skills and patterns for developing Odoo 19 modules.
 
-## 1. Module Scaffolding
+**Odoo 19 XML Views:**
+- Use `<list>` NOT `<tree>` for list views
+- Use `target="main"` NOT `target="inline"` for settings actions
+- `<search>` views: no `expand` attribute on `<group>`
+- `<app>` tag in settings: use `name="module_name"` NOT `data-key`
+- Do NOT use `string` attribute as XPath selector in view inheritance
+- Before writing XPath for QWeb report templates, extract actual structure first via Odoo shell
 
-### Basic Module Structure
-```
-module_name/
-├── __init__.py
-├── __manifest__.py
-├── models/
-│   ├── __init__.py
-│   └── model_name.py
-├── views/
-│   └── model_name_views.xml
-├── security/
-│   ├── ir.model.access.csv
-│   └── security.xml
-├── data/
-│   └── data.xml
-├── static/
-│   └── description/
-│       └── icon.png
-├── tests/
-│   ├── __init__.py
-│   └── test_model.py
-└── README.md
-```
+**Groups that do NOT exist in Community Edition:**
+- `base.group_multi_currency`
+- `account.group_account_basic`
+- `account.group_account_manager`
+- If inheriting views with these groups, remove the `groups` attribute
 
-### __manifest__.py Template
-```python
-{
-    'name': 'Module Name',
-    'version': '19.0.1.0.0',
-    'category': 'Category',
-    'summary': 'Short description',
-    'description': """
-        Detailed description of the module
-    """,
-    'author': 'Your Name',
-    'website': 'https://www.example.com',
-    'license': 'LGPL-3',
-    'depends': ['base'],
-    'data': [
-        'security/ir.model.access.csv',
-        'views/model_name_views.xml',
-    ],
-    'demo': [],
-    'installable': True,
-    'application': False,
-    'auto_install': False,
-}
-```
+**Python / ORM:**
+- `models.NewId` does NOT exist in Odoo 19 – use `isinstance(record.id, int)`
+- `target="inline"` is NOT valid for `ir.actions.act_window.target` – use `target="main"`
+- `button_immediate_install` cannot be called from `post_init_hook`
+- For `res.config.settings`, value `0` may not save – use Boolean checkbox + conditional field
+- `@api.model_create_multi` returns list – unwrap for single creates
+- XML-RPC `read()` method: fields go in kwargs `{"fields": [...]}`, not positional args
+- Sale order lines must be created with order using `(0, 0, vals)` command, not separately
 
-## 2. Model Development
+**Code style:**
+- Keep existing comments – do NOT remove them
+- Add docstrings to all new methods
+- File naming: no `_ext` suffix (e.g., `sale_order_line.py` not `sale_order_line_ext.py`)
+- Seed data in `default_data.xml` with `noupdate="1"`
 
-### Basic Model
-```python
-from odoo import models, fields, api
-from odoo.exceptions import ValidationError
+**Testing:**
+- `make test` must pass (all unit tests) after every change
+- `make reset` must work (clean install) after every change
+- `make smoke` must pass (E2E flow) after every change
+- Bank accounts in tests: search for existing before creating (avoid duplicate IBAN errors)
+- Cash rounding in tests: ensure profit/loss accounts are set
 
-class ModelName(models.Model):
-    _name = 'module.model'
-    _description = 'Model Description'
-    _order = 'name'
-    
-    name = fields.Char(string='Name', required=True, index=True)
-    description = fields.Text(string='Description')
-    active = fields.Boolean(string='Active', default=True)
-    state = fields.Selection([
-        ('draft', 'Draft'),
-        ('confirmed', 'Confirmed'),
-        ('done', 'Done'),
-    ], string='State', default='draft')
-```
-
-### Computed Fields
-```python
-    total_amount = fields.Float(
-        string='Total Amount',
-        compute='_compute_total_amount',
-        store=True
-    )
-    
-    @api.depends('line_ids.amount')
-    def _compute_total_amount(self):
-        for record in self:
-            record.total_amount = sum(record.line_ids.mapped('amount'))
-```
-
-### Constraints
-```python
-    @api.constrains('date_start', 'date_end')
-    def _check_dates(self):
-        for record in self:
-            if record.date_end and record.date_start > record.date_end:
-                raise ValidationError("End date must be after start date")
-```
-
-### Onchange Methods
-```python
-    @api.onchange('partner_id')
-    def _onchange_partner_id(self):
-        if self.partner_id:
-            self.address = self.partner_id.address
-```
-
-## 3. Inheritance Patterns
-
-### Classic Inheritance (_inherit)
-```python
-class ResPartner(models.Model):
-    _inherit = 'res.partner'
-    
-    custom_field = fields.Char(string='Custom Field')
-```
-
-### Delegation Inheritance (_inherits)
-```python
-class CustomUser(models.Model):
-    _name = 'custom.user'
-    _inherits = {'res.partner': 'partner_id'}
-    
-    partner_id = fields.Many2one('res.partner', required=True, ondelete='cascade')
-```
-
-## 4. View Development
-
-### Form View
-```xml
-<odoo>
-    <record id="view_model_form" model="ir.ui.view">
-        <field name="name">module.model.form</field>
-        <field name="model">module.model</field>
-        <field name="arch" type="xml">
-            <form>
-                <header>
-                    <button name="action_confirm" string="Confirm" type="object"/>
-                    <field name="state" widget="statusbar"/>
-                </header>
-                <sheet>
-                    <group>
-                        <field name="name"/>
-                        <field name="description"/>
-                    </group>
-                </sheet>
-            </form>
-        </field>
-    </record>
-</odoo>
-```
-
-### Tree View
-```xml
-<record id="view_model_tree" model="ir.ui.view">
-    <field name="name">module.model.tree</field>
-    <field name="model">module.model</field>
-    <field name="arch" type="xml">
-        <tree>
-            <field name="name"/>
-            <field name="state"/>
-        </tree>
-    </field>
-</record>
-```
-
-### Search View
-```xml
-<record id="view_model_search" model="ir.ui.view">
-    <field name="name">module.model.search</field>
-    <field name="model">module.model</field>
-    <field name="arch" type="xml">
-        <search>
-            <field name="name"/>
-            <filter name="active" string="Active" domain="[('active', '=', True)]"/>
-            <group expand="0" string="Group By">
-                <filter name="group_state" string="State" context="{'group_by': 'state'}"/>
-            </group>
-        </search>
-    </field>
-</record>
-```
-
-### Action
-```xml
-<record id="action_model" model="ir.actions.act_window">
-    <field name="name">Models</field>
-    <field name="res_model">module.model</field>
-    <field name="view_mode">tree,form</field>
-</record>
-```
-
-### Menu
-```xml
-<menuitem id="menu_model_root" name="Module Name"/>
-<menuitem id="menu_model" name="Models" parent="menu_model_root" action="action_model"/>
-```
-
-## 5. Security Configuration
-
-### ir.model.access.csv
-```csv
-id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_module_model_user,module.model.user,model_module_model,base.group_user,1,1,1,1
-access_module_model_manager,module.model.manager,model_module_model,base.group_system,1,1,1,1
-```
-
-### Record Rules
-```xml
-<record id="module_model_rule" model="ir.rule">
-    <field name="name">Model: user can only see own records</field>
-    <field name="model_id" ref="model_module_model"/>
-    <field name="domain_force">[('user_id', '=', user.id)]</field>
-    <field name="groups" eval="[(4, ref('base.group_user'))]"/>
-</record>
-```
-
-## 6. Testing
-
-### Unit Test
-```python
-from odoo.tests.common import TransactionCase
-from odoo.exceptions import ValidationError
-
-class TestModel(TransactionCase):
-    
-    def setUp(self):
-        super().setUp()
-        self.Model = self.env['module.model']
-    
-    def test_create_model(self):
-        record = self.Model.create({'name': 'Test'})
-        self.assertEqual(record.name, 'Test')
-    
-    def test_constraint(self):
-        with self.assertRaises(ValidationError):
-            self.Model.create({
-                'name': 'Test',
-                'date_start': '2024-01-01',
-                'date_end': '2023-01-01',
-            })
-```
-
-## 7. Common Patterns
-
-### CRUD Operations
-```python
-# Create
-record = self.env['module.model'].create({'name': 'New Record'})
-
-# Read
-records = self.env['module.model'].search([('active', '=', True)])
-record = self.env['module.model'].browse(record_id)
-
-# Update
-record.write({'name': 'Updated Name'})
-
-# Delete
-record.unlink()
-```
-
-### Working with Recordsets
-```python
-# Filtering
-active_records = records.filtered(lambda r: r.active)
-
-# Mapping
-names = records.mapped('name')
-
-# Sorting
-sorted_records = records.sorted(key=lambda r: r.name)
-```
-
-### Context and Environment
-```python
-# With different context
-records = self.env['module.model'].with_context(lang='en_US').search([])
-
-# With different user
-records = self.env['module.model'].with_user(user_id).search([])
-
-# Sudo (bypass access rights)
-records = self.env['module.model'].sudo().search([])
-```
-
-## 8. API Decorators
-
-- `@api.model`: Method operates on the model, not records
-- `@api.depends('field')`: Recompute when field changes
-- `@api.onchange('field')`: Trigger when field changes in UI
-- `@api.constrains('field')`: Validate field values
-- `@api.returns('model')`: Specify return type
+### Boundaries
+- Do NOT include implementation code examples (agent knows how to code)
+- Keep it concise – bullet points, not paragraphs
+- Focus on ERRATA (what's different/broken) not tutorials
 
 ## 9. Performance Tips
 
