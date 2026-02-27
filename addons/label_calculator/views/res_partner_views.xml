@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="view_partner_form_label" model="ir.ui.view">
+    <field name="name">res.partner.form.label</field>
+    <field name="model">res.partner</field>
+    <field name="inherit_id" ref="base.view_partner_form"/>
+    <field name="arch" type="xml">
+      <xpath expr="//page[@name='internal_notes']" position="before">
+        <page string="Štítky – slevy" name="label_discounts">
+          <group>
+            <group string="Automatická sleva">
+              <field name="label_total_invoiced" widget="monetary"/>
+              <field name="label_discount_tier_id"/>
+            </group>
+            <group string="Přetížení">
+              <field name="label_discount_override"/>
+              <field name="label_effective_discount" widget="percentage"/>
+            </group>
+          </group>
+        </page>
+      </xpath>
+    </field>
+  </record>
+
+</odoo>

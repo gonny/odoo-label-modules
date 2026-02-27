@@ -2,61 +2,76 @@
 <odoo>
 
   <record id="res_config_settings_view_form_label" model="ir.ui.view">
-    <field name="name">res.config.settings.view.form.label</field>
+    <field name="name">res.config.settings.view.form.inherit.label</field>
     <field name="model">res.config.settings</field>
     <field name="inherit_id" ref="base.res_config_settings_view_form"/>
     <field name="arch" type="xml">
       <xpath expr="//form" position="inside">
-        <app data-string="Label Calculator" string="Label Calculator" data-key="label_calculator">
+        <app data-string="Label Calculator" string="Kalkulačka štítků" name="label_calculator" groups="base.group_system">
 
-          <block title="Práce" name="label_work">
-            <setting string="Hodinová sazba" help="Tvoje požadovaná hodinová sazba (hrubá)">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_hourly_rate" class="col-lg-3 o_light_label"/>
-                  <field name="label_hourly_rate"/>
-                  <span class="ms-1">Kč/hod</span>
-                </div>
+          <block title="Práce" name="label_work_settings">
+            <setting id="label_hourly_rate_setting" string="Hodinová sazba" help="Tvoje požadovaná hodinová sazba za práci">
+              <field name="label_hourly_rate"/>
+            </setting>
+            <setting id="label_admin_overhead_setting" string="Admin overhead na zakázku" help="Komunikace, fakturace, balení – rozpočítá se na kusy">
+              <field name="label_admin_overhead_enabled"/>
+              <div invisible="not label_admin_overhead_enabled">
+                <field name="label_admin_overhead_minutes" class="oe_inline"/>
+ minut
               </div>
             </setting>
-            <setting string="Admin overhead" help="Čas na komunikaci, fakturaci, balení, poštu – rozpočítá se do ceny">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_admin_overhead_minutes" class="col-lg-3 o_light_label"/>
-                  <field name="label_admin_overhead_minutes"/>
-                  <span class="ms-1">minut na zakázku</span>
+          </block>
+
+          <block title="Stroje a provoz" name="label_machines_settings">
+            <setting id="label_amortization_setting" string="Amortizace strojů" help="Započítat amortizaci strojů do ceny">
+              <field name="label_amortization_enabled"/>
+            </setting>
+            <setting id="label_fixed_costs_setting" string="Fixní provozní náklady" help="Přičíst fixní náklady k hodinové sazbě">
+              <field name="label_fixed_costs_enabled"/>
+              <div invisible="not label_fixed_costs_enabled">
+                <div class="row mt8">
+                  <label for="label_fixed_rent_yearly" class="col-lg-4"/>
+                  <field name="label_fixed_rent_yearly" class="oe_inline"/>
+ Kč/rok
+                </div>
+                <div class="row mt8">
+                  <label for="label_fixed_energy_yearly" class="col-lg-4"/>
+                  <field name="label_fixed_energy_yearly" class="oe_inline"/>
+ Kč/rok
+                </div>
+                <div class="row mt8">
+                  <label for="label_fixed_other_yearly" class="col-lg-4"/>
+                  <field name="label_fixed_other_yearly" class="oe_inline"/>
+ Kč/rok
+                </div>
+                <div class="row mt8">
+                  <label for="label_working_hours_yearly" class="col-lg-4"/>
+                  <field name="label_working_hours_yearly" class="oe_inline"/>
+ hod/rok
                 </div>
               </div>
             </setting>
           </block>
 
-          <block title="Marže a přirážky" name="label_margins">
-            <setting string="DPH přirážka" help="Neplátce DPH – přirážka za nákup s DPH">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_vat_surcharge_pct" class="col-lg-3 o_light_label"/>
-                  <field name="label_vat_surcharge_pct"/>
-                  <span class="ms-1">%</span>
-                </div>
-              </div>
+          <block title="Marže a daně" name="label_margins_settings">
+            <setting id="label_vat_setting" string="Daň z příjmu" help="Navýšení ceny materiálu: cena / (1 - sazba)">
+              <field name="label_vat_surcharge_pct" class="oe_inline"/>
+ %
             </setting>
-            <setting string="Marže na materiál" help="Procentuální přirážka na materiálové náklady">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_material_margin_pct" class="col-lg-3 o_light_label"/>
-                  <field name="label_material_margin_pct"/>
-                  <span class="ms-1">%</span>
-                </div>
-              </div>
+            <setting id="label_margin_setting" string="Výchozí marže na materiál" help="Marže jako přirážka: 320% = cena je 4.2× nákladu. 0% = prodej za náklad. Záporná marže = ztráta.">
+              <field name="label_default_material_margin_pct" class="oe_inline"/>
+ %
             </setting>
-            <setting string="Minimální cena zakázky" help="Pod touto cenou se zakázka nevyplatí">
-              <div class="content-group">
-                <div class="row mt16">
-                  <label for="label_min_order_price" class="col-lg-3 o_light_label"/>
-                  <field name="label_min_order_price"/>
-                  <span class="ms-1">Kč</span>
-                </div>
-              </div>
+          </block>
+
+          <block title="Minima (varování)" name="label_minimums_settings">
+            <setting id="label_min_price_setting" string="Minimální cena zakázky">
+              <field name="label_min_order_price" class="oe_inline"/>
+ Kč
+            </setting>
+            <setting id="label_min_qty_setting" string="Minimální množství">
+              <field name="label_min_order_quantity" class="oe_inline"/>
+ ks
             </setting>
           </block>
 

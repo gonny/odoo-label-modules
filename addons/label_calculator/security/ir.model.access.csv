@@ -1,4 +1,8 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_label_material_group_user,label.material.group.user,model_label_material_group,base.group_user,1,1,1,1
 access_label_material_user,label.material.user,model_label_material,base.group_user,1,1,1,1
 access_label_machine_user,label.machine.user,model_label_machine,base.group_user,1,1,1,1
 access_label_production_tier_user,label.production.tier.user,model_label_production_tier,base.group_user,1,1,1,1
+access_label_material_tier_override_user,label.material.tier.override.user,model_label_material_tier_override,base.group_user,1,1,1,1
+access_partner_discount_tier_user,partner.discount.tier.user,model_partner_discount_tier,base.group_user,1,0,0,0
+access_partner_discount_tier_admin,partner.discount.tier.admin,model_partner_discount_tier,base.group_system,1,1,1,1

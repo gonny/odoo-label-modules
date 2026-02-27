@@ -1,16 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-  <!-- ============ HLAVNÍ MENU ============ -->
-  <menuitem id="label_menu_root" name="Štítky" sequence="100" web_icon="label_calculator,static/description/icon.png"/>
+  <!-- Akce pro otevření Settings přímo na naší sekci -->
+  <record id="label_config_settings_action" model="ir.actions.act_window">
+    <field name="name">Nastavení kalkulačky</field>
+    <field name="res_model">res.config.settings</field>
+    <field name="view_mode">form</field>
+    <field name="target">main</field>
+    <field name="context">{'module': 'label_calculator'}</field>
+  </record>
+
+  <!-- ============ ROOT MENU ============ -->
+  <menuitem id="label_menu_root" name="Kalkulačka štítků" sequence="100" web_icon="label_calculator,static/description/icon.png"/>
+
+  <!-- ============ PŘEHLEDY ============ -->
+  <menuitem id="label_menu_overview" name="Přehledy" parent="label_menu_root" sequence="10"/>
+
+  <menuitem id="label_menu_material_groups" name="Skupiny materiálů" parent="label_menu_overview" action="label_material_group_action" sequence="10"/>
+
+  <menuitem id="label_menu_materials" name="Všechny materiály" parent="label_menu_overview" action="label_material_action" sequence="20"/>
+
+  <menuitem id="label_menu_tiers" name="Množstevní hladiny" parent="label_menu_overview" action="label_production_tier_action" sequence="30"/>
 
   <!-- ============ KONFIGURACE ============ -->
   <menuitem id="label_menu_config" name="Konfigurace" parent="label_menu_root" sequence="90"/>
 
-  <menuitem id="label_menu_materials" name="Materiály" parent="label_menu_config" action="label_material_action" sequence="10"/>
+  <menuitem id="label_calculator_menu_discount_tiers" name="Zákaznické hladiny" parent="label_menu_config" action="action_partner_discount_tier" sequence="40"/>
 
-  <menuitem id="label_menu_machines" name="Stroje" parent="label_menu_config" action="label_machine_action" sequence="20"/>
+  <menuitem id="label_menu_machines" name="Stroje" parent="label_menu_config" action="label_machine_action" sequence="10"/>
 
-  <menuitem id="label_menu_tiers" name="Množstevní hladiny" parent="label_menu_config" action="label_production_tier_action" sequence="30"/>
+  <menuitem id="label_menu_settings" name="Nastavení" parent="label_menu_config" action="label_config_settings_action" sequence="99"/>
+
 
 </odoo>

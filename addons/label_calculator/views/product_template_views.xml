@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="product_template_form_view_label" model="ir.ui.view">
+    <field name="name">product.template.form.label</field>
+    <field name="model">product.template</field>
+    <field name="inherit_id" ref="product.product_template_form_view"/>
+    <field name="arch" type="xml">
+      <xpath expr="//page[@name='general_information']" position="before">
+        <page string="Kalkulačka štítků" name="label_calculator_page">
+          <group>
+            <group string="Cenotvorba">
+              <field name="pricing_type" widget="radio"/>
+              <field name="label_material_group_id" invisible="pricing_type != 'calculator'"/>
+              <field name="label_default_material_id" invisible="pricing_type != 'calculator'" domain="[('group_id', '=', label_material_group_id)]"/>
+            </group>
+            <group string="Info">
+              <div class="text-muted" invisible="pricing_type != 'calculator'">
+                <p>
+                  <strong>Kalkulačka štítků</strong> automaticky
+                                spočítá cenu na řádku objednávky podle zvoleného
+                                materiálu, rozměru a množství.</p>
+                <p>
+                  <strong>Výchozí varianta</strong> se předvyplní
+                                při přidání produktu do objednávky.</p>
+              </div>
+              <div class="text-muted" invisible="pricing_type != 'fixed'">
+                <p>Produkt s <strong>fixní cenou</strong> –
+                                cena se zadává ručně na řádku objednávky
+                                nebo se bere z ceníku.</p>
+              </div>
+            </group>
+          </group>
+        </page>
+      </xpath>
+    </field>
+  </record>
+
+</odoo>

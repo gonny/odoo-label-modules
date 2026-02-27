@@ -3,146 +3,233 @@ from odoo import models, fields, api
 
 class LabelMaterial(models.Model):
     _name = "label.material"
-    _description = "Materiál pro výrobu štítků"
-    _order = "material_type, name"
+    _description = "Materiál – varianta (barva, tloušťka...)"
+    _order = "group_id, name, color_name"
 
-    # === Základní info ===
     name = fields.Char(
         string="Název",
         required=True,
-        help="Např. 'Koženka černá', 'Satén 20mm bílý'",
+        help="Např. '0.5mm', '20mm', '40s ×1'",
     )
     active = fields.Boolean(default=True)
 
-    material_type = fields.Selection(
-        [
-            ("sheet", "Plošný materiál (gravírování)"),
-            ("ribbon", "Stuha (textilní etikety)"),
-            ("ttr", "TTR páska (termotransfer)"),
-            ("component", "Komponenta (nýt, kroužek...)"),
-        ],
-        string="Typ materiálu",
+    group_id = fields.Many2one(
+        "label.material.group",
+        string="Skupina",
         required=True,
-        default="sheet",
+        ondelete="cascade",
+    )
+    material_type = fields.Selection(
+        related="group_id.material_type",
+        store=True,
+        readonly=True,
     )
 
     # === Barva ===
-    color_name = fields.Char(
-        string="Barva",
-        help="Název barvy, např. 'Černá', 'Zlatá'",
-    )
-    color_hex = fields.Char(
-        string="Barva (hex)",
-        help="Hex kód pro zobrazení, např. '#000000'",
-    )
+    color_name = fields.Char(string="Barva / varianta")
+    color_hex = fields.Char(string="Barva (hex)")
 
-    # === Ceny dle typu materiálu ===
-
-    # Plošný materiál (gravírování)
-    price_per_m2 = fields.Float(
-        string="Cena za m² (Kč)",
+    # === Nákupní cena a DPH ===
+    purchase_price = fields.Float(
+        string="Nákupní cena",
+        digits=(12, 4),
+        help="Cena od dodavatele (s nebo bez DPH – viz příznak níže)",
+    )
+    purchase_vat_included = fields.Boolean(
+        string="Cena je s DPH",
+        default=True,
+        help="Zaškrtni, pokud dodavatel uvádí cenu včetně DPH",
+    )
+    purchase_vat_pct = fields.Float(
+        string="Sazba DPH (%)",
+        default=21,
+    )
+    purchase_price_excl_vat = fields.Float(
+        string="Cena bez DPH",
+        digits=(12, 4),
+        compute="_compute_vat_prices",
+        store=True,
+    )
+    purchase_price_incl_vat = fields.Float(
+        string="Nákupní cena s DPH",
+        compute="_compute_price_incl_vat",
+        store=True,
         digits=(12, 2),
-        help="Nákupní cena za 1 m² materiálu",
+        help="Cena vždy S DPH – používá se pro kalkulaci.",
+    )
+
+    # === Rozměry zdroje (tabule, role) ===
+    # area: tabule/arch
+    sheet_width_mm = fields.Float(
+        string="Šířka tabule (mm)",
+        digits=(10, 1),
+        help="Pro plošný materiál – šířka nakupované tabule/archu",
+    )
+    sheet_height_mm = fields.Float(
+        string="Výška tabule (mm)",
+        digits=(10, 1),
+        help="Pro plošný materiál – výška nakupované tabule/archu",
     )
     thickness_mm = fields.Float(
         string="Tloušťka (mm)",
         digits=(6, 2),
     )
 
-    # Stuha (textilní etikety)
-    ribbon_width_mm = fields.Float(
-        string="Šířka stuhy (mm)",
+    # length: role (stuha i TTR)
+    roll_width_mm = fields.Float(
+        string="Šířka role (mm)",
         digits=(6, 1),
+        help="Fixní šířka role – zákazník nemůže objednat menší",
     )
-    price_per_meter = fields.Float(
-        string="Cena za metr (Kč)",
-        digits=(12, 4),
-        help="Nákupní cena za 1 běžný metr stuhy",
-    )
-
-    # TTR páska
-    ttr_width_mm = fields.Float(
-        string="Šířka TTR (mm)",
-        digits=(6, 1),
-    )
-    ttr_length_m = fields.Float(
-        string="Délka role TTR (m)",
+    roll_length_m = fields.Float(
+        string="Délka role (m)",
         digits=(8, 1),
     )
-    ttr_price_per_roll = fields.Float(
-        string="Cena za roli TTR (Kč)",
-        digits=(12, 2),
+
+    # time: heat press
+    time_seconds = fields.Float(
+        string="Čas na kus (s)",
+        digits=(8, 1),
+    )
+    time_multiplier = fields.Integer(
+        string="Počet opakování",
+        default=1,
     )
 
-    # Komponenta (nýt, kroužek, díra...)
+    # pieces: komponenty
     component_price = fields.Float(
         string="Cena za kus (Kč)",
-        digits=(12, 5),
+        digits=(12, 4),
     )
 
-    # === Automaticky vypočtené jednotkové ceny ===
+    # === Computed jednotkové ceny ===
     price_per_mm2 = fields.Float(
-        string="Cena za mm²",
+        string="Cena/mm²",
         digits=(12, 10),
         compute="_compute_unit_prices",
         store=True,
-        help="Automaticky vypočteno z ceny za m² nebo TTR role",
     )
     price_per_mm_length = fields.Float(
-        string="Cena za mm délky",
+        string="Cena/mm délky",
         digits=(12, 8),
         compute="_compute_unit_prices",
         store=True,
-        help="Automaticky vypočteno z ceny za metr stuhy",
+    )
+    price_per_second = fields.Float(
+        string="Cena/s (amortizace)",
+        digits=(12, 8),
+        compute="_compute_unit_prices",
+        store=True,
     )
 
-    # === Výrobní parametry ===
-    laser_power_pct = fields.Float(
-        string="Laser výkon (%)",
-        help="Doporučený výkon laseru pro tento materiál/barvu",
+    # === Výroba ===
+    production_notes = fields.Text(string="Výrobní poznámky")
+
+    # === Tier overrides ===
+    tier_override_ids = fields.One2many(
+        "label.material.tier.override", "material_id",
+        string="Přetížení hladin",
     )
-    laser_speed = fields.Float(
-        string="Laser rychlost (mm/s)",
-        help="Doporučená rychlost laseru",
-    )
-    production_notes = fields.Text(
-        string="Výrobní poznámky",
-        help="Jak se tento materiál chová při výrobě, na co si dát pozor",
-    )
+
+    @api.depends("purchase_price", "purchase_vat_included", "purchase_vat_pct")
+    def _compute_price_incl_vat(self):
+        for mat in self:
+            if mat.purchase_vat_included:
+                mat.purchase_price_incl_vat = mat.purchase_price
+            else:
+                vat = mat.purchase_vat_pct or 0
+                mat.purchase_price_incl_vat = mat.purchase_price * (1 + vat / 100)
+
+
+    @api.depends("purchase_price", "purchase_vat_included", "purchase_vat_pct")
+    def _compute_vat_prices(self):
+        for mat in self:
+            vat_rate = mat.purchase_vat_pct / 100 if mat.purchase_vat_pct else 0
+            if mat.purchase_vat_included:
+                mat.purchase_price_incl_vat = mat.purchase_price
+                mat.purchase_price_excl_vat = (
+                    mat.purchase_price / (1 + vat_rate) if vat_rate else mat.purchase_price
+                )
+            else:
+                mat.purchase_price_excl_vat = mat.purchase_price
+                mat.purchase_price_incl_vat = mat.purchase_price * (1 + vat_rate)
 
     @api.depends(
         "material_type",
-        "price_per_m2",
-        "price_per_meter",
-        "ttr_price_per_roll",
-        "ttr_length_m",
-        "ttr_width_mm",
+        "purchase_price_incl_vat",
+        "sheet_width_mm", "sheet_height_mm",
+        "roll_width_mm", "roll_length_m",
+        "group_id.machine_id",
+        "group_id.machine_id.hourly_amortization",
     )
     def _compute_unit_prices(self):
         for mat in self:
             mat.price_per_mm2 = 0
             mat.price_per_mm_length = 0
+            mat.price_per_second = 0
 
-            if mat.material_type == "sheet" and mat.price_per_m2:
-                # 1 m² = 1 000 000 mm²
-                mat.price_per_mm2 = mat.price_per_m2 / 1_000_000
+            price = mat.purchase_price_incl_vat or 0
 
-            elif mat.material_type == "ribbon" and mat.price_per_meter:
-                # 1 m = 1 000 mm
-                mat.price_per_mm_length = mat.price_per_meter / 1_000
+            if mat.material_type == "area":
+                # Tabule: cena / (šířka × výška) = cena za mm²
+                if mat.sheet_width_mm and mat.sheet_height_mm and price:
+                    area_mm2 = mat.sheet_width_mm * mat.sheet_height_mm
+                    mat.price_per_mm2 = price / area_mm2
 
-            elif mat.material_type == "ttr":
-                if mat.ttr_length_m and mat.ttr_width_mm and mat.ttr_price_per_roll:
-                    # Celková plocha role v mm²
-                    total_mm2 = mat.ttr_length_m * 1_000 * mat.ttr_width_mm
-                    mat.price_per_mm2 = mat.ttr_price_per_roll / total_mm2
+            elif mat.material_type == "length":
+                # Role: cena / (délka v mm) = cena za mm délky
+                if mat.roll_length_m and price:
+                    length_mm = mat.roll_length_m * 1_000
+                    mat.price_per_mm_length = price / length_mm
+
+            elif mat.material_type == "time":
+                # Čas: amortizace stroje / 3600 = cena za sekundu
+                machine = mat.group_id.machine_id
+                if machine and machine.hourly_amortization:
+                    mat.price_per_second = machine.hourly_amortization / 3600
+
+    def get_unit_cost(self, width_mm=0, height_mm=0):
+        """Vrátí cenu za 1 ks materiálu VŽDY S DPH.
+        
+        Používá purchase_price_incl_vat – dopočítanou cenu s DPH.
+        """
+        self.ensure_one()
+        mat_type = self.group_id.material_type
+        price = self.purchase_price_incl_vat
+
+        if mat_type == "area":
+            sheet_area = self.sheet_width_mm * self.sheet_height_mm
+            if not sheet_area:
+                return 0
+            price_per_mm2 = price / sheet_area
+            label_area = width_mm * height_mm
+            return price_per_mm2 * label_area
+
+        elif mat_type == "length":
+            roll_length_mm = self.roll_length_m * 1000
+            if not roll_length_mm:
+                return 0
+            price_per_mm = price / roll_length_mm
+            return price_per_mm * height_mm
+
+        elif mat_type == "pieces":
+            return self.component_price
+
+        elif mat_type == "time":
+            return 0
+
+        return 0
 
     def name_get(self):
-        """Zobrazení v dropdownech: 'Satén 20mm – Černá'"""
         result = []
         for mat in self:
-            name = mat.name
+            parts = [mat.group_id.name or "", mat.name or ""]
             if mat.color_name:
-                name = f"{mat.name} – {mat.color_name}"
-            result.append((mat.id, name))
+                parts.append(mat.color_name)
+            if mat.material_type == "time" and mat.time_seconds:
+                time_str = f"{mat.time_seconds:.0f}s"
+                if mat.time_multiplier and mat.time_multiplier > 1:
+                    time_str += f" ×{mat.time_multiplier}"
+                parts.append(time_str)
+            result.append((mat.id, " – ".join(filter(None, parts))))
         return result

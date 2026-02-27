@@ -2,104 +2,400 @@
 <odoo>
   <data noupdate="1">
 
-    <!-- ============ VÝCHOZÍ HLADINY ============ -->
-    <record id="tier_small" model="label.production.tier">
-      <field name="name">Malá série</field>
-      <field name="min_quantity">1</field>
-      <field name="max_quantity">49</field>
-      <field name="pieces_per_hour">500</field>
-      <field name="waste_test_pieces">10</field>
-    </record>
-
-    <record id="tier_medium" model="label.production.tier">
-      <field name="name">Střední série</field>
-      <field name="min_quantity">50</field>
-      <field name="max_quantity">99</field>
-      <field name="pieces_per_hour">750</field>
-      <field name="waste_test_pieces">5</field>
-    </record>
-
-    <record id="tier_large" model="label.production.tier">
-      <field name="name">Velká série</field>
-      <field name="min_quantity">100</field>
-      <field name="max_quantity">499</field>
-      <field name="pieces_per_hour">1000</field>
-      <field name="waste_test_pieces">3</field>
-    </record>
-
-    <record id="tier_bulk" model="label.production.tier">
-      <field name="name">Velkoobjem</field>
-      <field name="min_quantity">500</field>
-      <field name="max_quantity">999999</field>
-      <field name="pieces_per_hour">1200</field>
-      <field name="waste_test_pieces">2</field>
-    </record>
-
-    <!-- ============ VÝCHOZÍ STROJE ============ -->
+    <!-- ============ STROJE ============ -->
     <record id="machine_laser" model="label.machine">
       <field name="name">Laser CO2</field>
-      <field name="purchase_price">100000</field>
-      <field name="lifetime_years">5</field>
-      <field name="hours_per_year">1000</field>
+      <field name="purchase_price">1000000</field>
+      <field name="lifetime_years">15</field>
+      <field name="working_days_per_week">5</field>
+      <field name="hours_per_day">5</field>
+      <field name="weeks_per_year">44</field>
+      <field name="notes">7000 za servisní prohlídku</field>
     </record>
 
     <record id="machine_printer" model="label.machine">
       <field name="name">Tiskárna etiket</field>
-      <field name="purchase_price">35000</field>
-      <field name="lifetime_years">4</field>
-      <field name="hours_per_year">800</field>
+      <field name="purchase_price">80000</field>
+      <field name="lifetime_years">5</field>
+      <field name="working_days_per_week">5</field>
+      <field name="hours_per_day">4</field>
+      <field name="weeks_per_year">44</field>
     </record>
 
-    <!-- ============ UKÁZKOVÉ MATERIÁLY ============ -->
-    <record id="mat_alu_05_silver" model="label.material">
-      <field name="name">Hliník 0.5mm</field>
-      <field name="material_type">sheet</field>
+    <record id="machine_heat_press" model="label.machine">
+      <field name="name">Heat press</field>
+      <field name="purchase_price">65000</field>
+      <field name="lifetime_years">8</field>
+      <field name="working_days_per_week">5</field>
+      <field name="hours_per_day">1</field>
+      <field name="weeks_per_year">44</field>
+    </record>
+
+    <!-- ============ SKUPINY ============ -->
+    <record id="group_leatherette" model="label.material.group">
+      <field name="name">Koženka Royal</field>
+      <field name="material_type">area</field>
+      <field name="is_addon" eval="False"/>
+      <field name="default_margin_pct">35</field>
+      <field name="machine_id" ref="machine_laser"/>
+      <field name="sequence">10</field>
+    </record>
+
+    <record id="group_satin" model="label.material.group">
+      <field name="name">Satén</field>
+      <field name="material_type">length</field>
+      <field name="is_addon" eval="False"/>
+      <field name="default_margin_pct">25</field>
+      <field name="machine_id" ref="machine_printer"/>
+      <field name="sequence">20</field>
+    </record>
+
+    <record id="group_ttr" model="label.material.group">
+      <field name="name">TTR pásky</field>
+      <field name="material_type">length</field>
+      <field name="is_addon" eval="True"/>
+      <field name="default_margin_pct">20</field>
+      <field name="sequence">50</field>
+    </record>
+
+    <record id="group_heat_press" model="label.material.group">
+      <field name="name">Heat press</field>
+      <field name="material_type">time</field>
+      <field name="is_addon" eval="True"/>
+      <field name="machine_id" ref="machine_heat_press"/>
+      <field name="sequence">60</field>
+    </record>
+
+    <record id="group_components" model="label.material.group">
+      <field name="name">Komponenty</field>
+      <field name="material_type">pieces</field>
+      <field name="is_addon" eval="True"/>
+      <field name="default_margin_pct">40</field>
+      <field name="sequence">70</field>
+    </record>
+
+    <!-- ============ MATERIÁLY ============ -->
+
+    <!-- Hliník – area: cena tabule → cena/mm² -->
+    <record id="mat_leatherette_black_silver" model="label.material">
+      <field name="name">Černo / stříbrná</field>
+      <field name="group_id" ref="group_leatherette"/>
       <field name="color_name">Přírodní stříbrná</field>
       <field name="color_hex">#C0C0C0</field>
-      <field name="price_per_m2">850</field>
-      <field name="thickness_mm">0.5</field>
-      <field name="laser_power_pct">80</field>
-      <field name="laser_speed">500</field>
-      <field name="production_notes">Standardní nastavení. Gravíruje se tmavý kontrast na světlém podkladu.</field>
+      <field name="purchase_price">310</field>
+      <field name="purchase_vat_included" eval="True"/>
+      <field name="purchase_vat_pct">21</field>
+      <field name="sheet_width_mm">600</field>
+      <field name="sheet_height_mm">300</field>
+      <field name="thickness_mm">0.8</field>
     </record>
 
-    <record id="mat_alu_05_black" model="label.material">
-      <field name="name">Hliník 0.5mm</field>
-      <field name="material_type">sheet</field>
-      <field name="color_name">Černá eloxovaná</field>
+    <record id="mat_leatherette_marble" model="label.material">
+      <field name="name">Mramor</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="color_name">Mramor</field>
       <field name="color_hex">#1a1a1a</field>
-      <field name="price_per_m2">920</field>
-      <field name="thickness_mm">0.5</field>
-      <field name="laser_power_pct">40</field>
-      <field name="laser_speed">800</field>
-      <field name="production_notes">NÍZKÝ VÝKON! Gravíruje se světlý kontrast na tmavém podkladu. Pozor na přepálení.</field>
+      <field name="purchase_price">310</field>
+      <field name="purchase_vat_included" eval="True"/>
+      <field name="purchase_vat_pct">21</field>
+      <field name="sheet_width_mm">600</field>
+      <field name="sheet_height_mm">300</field>
+      <field name="thickness_mm">0.8</field>
     </record>
 
+    <!-- Satén – length: cena role → cena/mm -->
     <record id="mat_satin_20_white" model="label.material">
-      <field name="name">Satén 20mm</field>
-      <field name="material_type">ribbon</field>
+      <field name="name">Bílá 20mm</field>
+      <field name="group_id" ref="group_satin"/>
       <field name="color_name">Bílý</field>
       <field name="color_hex">#FFFFFF</field>
-      <field name="ribbon_width_mm">20</field>
-      <field name="price_per_meter">2.20</field>
+      <field name="purchase_price">509</field>
+      <field name="purchase_vat_included" eval="False"/>
+      <field name="purchase_vat_pct">21</field>
+      <field name="roll_width_mm">20</field>
+      <field name="roll_length_m">200</field>
     </record>
 
+    <record id="mat_satin_30_black" model="label.material">
+      <field name="name">Černý 30mm</field>
+      <field name="group_id" ref="group_satin"/>
+      <field name="color_name">Černý</field>
+      <field name="color_hex">#000000</field>
+      <field name="purchase_price">900</field>
+      <field name="purchase_vat_included" eval="False"/>
+      <field name="purchase_vat_pct">21</field>
+      <field name="roll_width_mm">30</field>
+      <field name="roll_length_m">200</field>
+    </record>
+
+    <!-- TTR – length: cena role → cena/mm -->
     <record id="mat_ttr_black" model="label.material">
-      <field name="name">TTR páska</field>
-      <field name="material_type">ttr</field>
+      <field name="name">Černá textilní</field>
+      <field name="group_id" ref="group_ttr"/>
       <field name="color_name">Černá</field>
       <field name="color_hex">#000000</field>
-      <field name="ttr_width_mm">110</field>
-      <field name="ttr_length_m">100</field>
-      <field name="ttr_price_per_roll">350</field>
+      <field name="purchase_price">264</field>
+      <field name="purchase_vat_included" eval="False"/>
+      <field name="purchase_vat_pct">21</field>
+      <field name="roll_width_mm">44</field>
+      <field name="roll_length_m">300</field>
     </record>
 
+    <record id="mat_ttr_silver_mat" model="label.material">
+      <field name="name">Stříbrná textilní</field>
+      <field name="group_id" ref="group_ttr"/>
+      <field name="color_name">Stříbrná</field>
+      <field name="color_hex">#C0C0C0</field>
+      <field name="purchase_price">441</field>
+      <field name="purchase_vat_included" eval="False"/>
+      <field name="purchase_vat_pct">21</field>
+      <field name="roll_width_mm">69</field>
+      <field name="roll_length_m">200</field>
+    </record>
+
+    <!-- Heat press – time -->
+    <record id="mat_heat_press_40s" model="label.material">
+      <field name="name">40s ×1</field>
+      <field name="group_id" ref="group_heat_press"/>
+      <field name="time_seconds">40</field>
+      <field name="time_multiplier">1</field>
+    </record>
+
+    <record id="mat_heat_press_40s_3x" model="label.material">
+      <field name="name">40s ×3</field>
+      <field name="group_id" ref="group_heat_press"/>
+      <field name="time_seconds">40</field>
+      <field name="time_multiplier">3</field>
+      <field name="production_notes">Bavlněné štítky – 3× press</field>
+    </record>
+
+    <record id="mat_heat_press_preheat" model="label.material">
+      <field name="name">Předehřátí 600s</field>
+      <field name="group_id" ref="group_heat_press"/>
+      <field name="time_seconds">600</field>
+      <field name="time_multiplier">1</field>
+    </record>
+
+    <!-- Komponenty – pieces -->
     <record id="mat_rivet_brass" model="label.material">
       <field name="name">Nýt mosazný</field>
-      <field name="material_type">component</field>
+      <field name="group_id" ref="group_components"/>
       <field name="color_name">Mosaz</field>
       <field name="color_hex">#B5A642</field>
       <field name="component_price">1.20</field>
+    </record>
+
+    <!-- ============ HLADINY ============ -->
+
+    <record id="tier_leatherette_upto_30" model="label.production.tier">
+      <field name="name">Do 30</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="min_quantity">1</field>
+      <field name="max_quantity">29</field>
+      <field name="pieces_per_hour">80</field>
+      <field name="margin_pct">320</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">15</field>
+    </record>
+
+    <record id="tier_leatherette_upto_50" model="label.production.tier">
+      <field name="name">Do 50</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="min_quantity">30</field>
+      <field name="max_quantity">49</field>
+      <field name="pieces_per_hour">85</field>
+      <field name="margin_pct">320</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">15</field>
+    </record>
+
+    <record id="tier_leatherette_upto_100" model="label.production.tier">
+      <field name="name">Do 100</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="min_quantity">50</field>
+      <field name="max_quantity">99</field>
+      <field name="pieces_per_hour">90</field>
+      <field name="margin_pct">320</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">15</field>
+    </record>
+
+    <record id="tier_leatherette_upto_500" model="label.production.tier">
+      <field name="name">Do 500</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="min_quantity">100</field>
+      <field name="max_quantity">499</field>
+      <field name="pieces_per_hour">100</field>
+      <field name="margin_pct">300</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">15</field>
+    </record>
+
+    <record id="tier_leatherette_upto_1000" model="label.production.tier">
+      <field name="name">Do 1000</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="min_quantity">500</field>
+      <field name="max_quantity">999</field>
+      <field name="pieces_per_hour">100</field>
+      <field name="margin_pct">280</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">15</field>
+    </record>
+
+    <record id="tier_leatherette_morethan_1000" model="label.production.tier">
+      <field name="name">Více než 1000</field>
+      <field name="group_id" ref="group_leatherette"/>
+      <field name="min_quantity">1000</field>
+      <field name="max_quantity">999999</field>
+      <field name="pieces_per_hour">100</field>
+      <field name="margin_pct">260</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">15</field>
+    </record>
+
+    <record id="tier_satin_upto_200" model="label.production.tier">
+      <field name="name">Do 200</field>
+      <field name="group_id" ref="group_satin"/>
+      <field name="min_quantity">1</field>
+      <field name="max_quantity">199</field>
+      <field name="pieces_per_hour">800</field>
+      <field name="margin_pct">320</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">30</field>
+    </record>
+
+    <record id="tier_satin_upto_500" model="label.production.tier">
+      <field name="name">Do 500</field>
+      <field name="group_id" ref="group_satin"/>
+      <field name="min_quantity">200</field>
+      <field name="max_quantity">499</field>
+      <field name="pieces_per_hour">800</field>
+      <field name="margin_pct">290</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">30</field>
+    </record>
+
+    <record id="tier_satin_upto_1000" model="label.production.tier">
+      <field name="name">Do 1000</field>
+      <field name="group_id" ref="group_satin"/>
+      <field name="min_quantity">500</field>
+      <field name="max_quantity">999</field>
+      <field name="pieces_per_hour">800</field>
+      <field name="margin_pct">260</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">30</field>
+    </record>
+
+    <record id="tier_satin_upto_5000" model="label.production.tier">
+      <field name="name">Do 5000</field>
+      <field name="group_id" ref="group_satin"/>
+      <field name="min_quantity">1000</field>
+      <field name="max_quantity">4999</field>
+      <field name="pieces_per_hour">800</field>
+      <field name="margin_pct">210</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">30</field>
+    </record>
+
+    <record id="tier_satin_morethan_5000" model="label.production.tier">
+      <field name="name">Více než 5000</field>
+      <field name="group_id" ref="group_satin"/>
+      <field name="min_quantity">5000</field>
+      <field name="max_quantity">999999</field>
+      <field name="pieces_per_hour">800</field>
+      <field name="margin_pct">180</field>
+      <field name="waste_test_pieces">0</field>
+      <field name="waste_test_percentage">10</field>
+      <field name="waste_pruning_percentage">30</field>
+    </record>
+
+    <!-- Globální nastavení -->
+    <record id="global_settings" model="res.config.settings">
+      <field name="label_hourly_rate">810</field>
+      <field name="label_fixed_energy_yearly">27000</field>      <!--- topení + elektřina-->
+      <field name="label_fixed_rent_yearly">7000</field>      <!--- servisní prohlídka stroje-->
+      <field name="label_admin_overhead_minutes">0</field>      <!--- servisní prohlídka stroje-->
+    </record>
+
+    <!-- ============ PRODUKTY ============ -->
+
+    <record id="product_label_engraved" model="product.template">
+      <field name="name">Gravírovaný štítek</field>
+      <field name="type">consu</field>
+      <field name="pricing_type">calculator</field>
+      <field name="label_material_group_id" ref="group_leatherette"/>
+      <field name="label_default_material_id" ref="mat_leatherette_black_silver"/>
+      <field name="list_price">0</field>
+      <field name="sale_ok" eval="True"/>
+      <field name="purchase_ok" eval="False"/>
+    </record>
+
+    <record id="product_label_textile" model="product.template">
+      <field name="name">Textilní etiketa</field>
+      <field name="type">consu</field>
+      <field name="pricing_type">calculator</field>
+      <field name="label_material_group_id" ref="group_satin"/>
+      <field name="label_default_material_id" ref="mat_satin_20_white"/>
+      <field name="list_price">0</field>
+      <field name="sale_ok" eval="True"/>
+      <field name="purchase_ok" eval="False"/>
+    </record>
+
+    <!-- ============ SLEVOVÉ HLADINY ============ -->
+    <record id="discount_tier_bronze" model="partner.discount.tier">
+      <field name="name">Bronzový</field>
+      <field name="min_spent">5000</field>
+      <field name="discount_pct">5</field>
+    </record>
+
+    <record id="discount_tier_silver" model="partner.discount.tier">
+      <field name="name">Stříbrný</field>
+      <field name="min_spent">20000</field>
+      <field name="discount_pct">10</field>
+    </record>
+
+    <record id="discount_tier_gold" model="partner.discount.tier">
+      <field name="name">Zlatý</field>
+      <field name="min_spent">50000</field>
+      <field name="discount_pct">15</field>
+    </record>
+
+    <!-- ============ BANKOVNÍ ÚČTY SPOLEČNOSTI ============ -->
+    <record id="company_bank_czk" model="res.partner.bank">
+      <field name="acc_number">CZ6508000000192000145399</field>
+      <field name="partner_id" ref="base.main_partner"/>
+      <field name="currency_id" ref="base.CZK"/>
+    </record>
+
+    <record id="company_bank_eur" model="res.partner.bank">
+      <field name="acc_number">CZ1234567890123456789012</field>
+      <field name="partner_id" ref="base.main_partner"/>
+      <field name="currency_id" ref="base.EUR"/>
+    </record>
+
+    <!-- ============ CASH ROUNDING ============ -->
+    <record id="cash_rounding_czk" model="account.cash.rounding">
+      <field name="name">CZK zaokrouhlení na 0.1 Kč</field>
+      <field name="rounding">0.1</field>
+      <field name="strategy">add_invoice_line</field>
+      <field name="rounding_method">HALF-UP</field>
+    </record>
+
+    <record id="cash_rounding_eur" model="account.cash.rounding">
+      <field name="name">EUR zaokrouhlení na 0.01 €</field>
+      <field name="rounding">0.01</field>
+      <field name="strategy">add_invoice_line</field>
+      <field name="rounding_method">HALF-UP</field>
     </record>
 
   </data>

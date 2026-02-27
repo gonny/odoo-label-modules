@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ============ LIST ============ -->
+  <record id="view_partner_discount_tier_list" model="ir.ui.view">
+    <field name="name">partner.discount.tier.list</field>
+    <field name="model">partner.discount.tier</field>
+    <field name="arch" type="xml">
+      <list editable="bottom">
+        <field name="sequence" widget="handle"/>
+        <field name="name"/>
+        <field name="min_spent"/>
+        <field name="discount_pct"/>
+        <field name="active"/>
+      </list>
+    </field>
+  </record>
+
+  <!-- ============ FORM ============ -->
+  <record id="view_partner_discount_tier_form" model="ir.ui.view">
+    <field name="name">partner.discount.tier.form</field>
+    <field name="model">partner.discount.tier</field>
+    <field name="arch" type="xml">
+      <form>
+        <sheet>
+          <group>
+            <group>
+              <field name="name"/>
+              <field name="min_spent"/>
+              <field name="discount_pct"/>
+            </group>
+            <group>
+              <field name="active"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ============ ACTION ============ -->
+  <record id="action_partner_discount_tier" model="ir.actions.act_window">
+    <field name="name">Slevové hladiny</field>
+    <field name="res_model">partner.discount.tier</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+</odoo>

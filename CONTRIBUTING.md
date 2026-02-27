@@ -1,320 +1,216 @@
-# Contributing to Odoo Label Modules
+# CONTRIBUTING.md – Development Guide
 
-Thank you for your interest in contributing to the Odoo Label Modules project! This document provides guidelines and instructions for contributing.
+## Project: Odoo Label Calculator
 
-## Table of Contents
+Custom Odoo 19 CE module for calculating prices of engraved labels
+and textile tags. Self-hosted via Docker.
 
-- [Getting Started](#getting-started)
-- [Development Environment](#development-environment)
-- [Code Standards](#code-standards)
-- [Module Development](#module-development)
-- [Testing](#testing)
-- [Submitting Changes](#submitting-changes)
-- [Code Review Process](#code-review-process)
+## Tech Stack
 
-## Getting Started
+- **Odoo 19** Community Edition (Python 3.12)
+- **PostgreSQL 16**
+- **Docker + Docker Compose** (v2 plugin)
+- SvelteKit (Phase 2 – public calculator)
 
-### Prerequisites
+---
 
-- Docker Desktop or Docker Engine
-- Visual Studio Code with Dev Containers extension
-- Git
-- Basic knowledge of Python and Odoo framework
-
-### Setting Up Your Development Environment
-
-1. Fork the repository
-2. Clone your fork:
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/odoo-label-modules.git
-   cd odoo-label-modules
-   ```
-3. Open in VSCode and reopen in container when prompted
-4. Create a new branch for your work:
-   ```bash
-   git checkout -b feature/your-feature-name
-   ```
-
-## Development Environment
-
-### Using DevContainer
-
-The project includes a pre-configured DevContainer with all necessary tools:
-
-- Python 3.12
-- Docker-in-Docker
-- VSCode extensions for Python, XML, Docker, and Odoo development
-- Code quality tools (black, pylint, flake8, isort)
-- Testing framework (pytest)
-
-### Running Odoo Locally
-
-Use Docker Compose to run Odoo 19 with PostgreSQL:
+## Quick Start
 
 ```bash
-docker-compose up -d
+# 1. Clone the repository
+git clone https://github.com/gonny/odoo-label-modules.git
+cd odoo-label-modules
+
+# 2. Start the environment
+make up                  # starts Odoo + PostgreSQL
+
+# 3. Initialize the database with the module and seed data
+make reset               # drops DB, installs module, seeds data
+
+# 4. Open Odoo in your browser
+#    URL:      http://localhost:8069
+#    Login:    admin
+#    Password: admin
+#    Database: odoo_label
 ```
 
-Access Odoo at http://localhost:8069
+After `make reset`, Odoo should show:
+- Menu **"Kalkulačka štítků"** with submenus
+- 5 material groups (Koženka Royal, Satén, TTR pásky, Heat press, Komponenty)
+- 2 products (Gravírovaný štítek, Textilní etiketa)
+- Settings page with hourly rate, tax, margins
 
-To view logs:
-```bash
-docker-compose logs -f odoo
-```
+---
 
-To stop services:
-```bash
-docker-compose down
-```
+## Makefile Targets
 
-## Code Standards
-
-### Python Code Style
-
-We follow PEP 8 and use automated tools to enforce code quality:
-
-1. **Black** for code formatting:
-   ```bash
-   black .
-   ```
-
-2. **isort** for import sorting:
-   ```bash
-   isort .
-   ```
-
-3. **Flake8** for linting:
-   ```bash
-   flake8 .
-   ```
-
-4. **Pylint** for additional checks:
-   ```bash
-   pylint **/*.py
-   ```
-
-### Odoo Specific Guidelines
-
-Follow the [OCA Guidelines](https://github.com/OCA/odoo-community.org) for Odoo development:
-
-- Use proper module structure
-- Follow naming conventions
-- Add proper documentation
-- Include security configurations
-- Write unit tests
-
-### XML Formatting
-
-- Use 4 spaces for indentation
-- Use proper XML formatting
-- Add comments for complex logic
-
-## Module Development
-
-### Creating a New Module
-
-1. Use the standard Odoo module structure (see `example_label_module/`)
-2. Required files:
-   - `__init__.py`
-   - `__manifest__.py`
-   - `models/` directory with model definitions
-   - `views/` directory with XML views
-   - `security/ir.model.access.csv`
-   - `README.md` with module documentation
-
-### Module Structure
-
-```
-module_name/
-├── __init__.py
-├── __manifest__.py
-├── README.md
-├── models/
-│   ├── __init__.py
-│   └── model_name.py
-├── views/
-│   ├── model_views.xml
-│   └── menu_views.xml
-├── security/
-│   ├── ir.model.access.csv
-│   └── security.xml (if needed)
-├── data/
-│   └── data.xml (if needed)
-├── static/
-│   └── description/
-│       ├── icon.png or icon.svg
-│       └── index.html (optional)
-└── tests/
-    ├── __init__.py
-    └── test_model.py
-```
-
-### __manifest__.py Requirements
-
-```python
-{
-    'name': 'Module Name',
-    'version': '19.0.1.0.0',  # Odoo version.major.minor.patch
-    'category': 'Category',
-    'summary': 'Short description',
-    'description': """Long description""",
-    'author': 'Your Name',
-    'website': 'https://www.example.com',
-    'license': 'LGPL-3',
-    'depends': ['base'],
-    'data': [
-        'security/ir.model.access.csv',
-        'views/views.xml',
-    ],
-    'demo': [],
-    'installable': True,
-    'application': False,
-    'auto_install': False,
-}
-```
-
-## Testing
-
-### Writing Tests
-
-Create tests in the `tests/` directory:
-
-```python
-from odoo.tests.common import TransactionCase
-
-class TestMyModel(TransactionCase):
-    def setUp(self):
-        super().setUp()
-        self.Model = self.env['my.model']
-    
-    def test_something(self):
-        record = self.Model.create({'name': 'Test'})
-        self.assertEqual(record.name, 'Test')
-```
+| Target          | Description                                              |
+| --------------- | -------------------------------------------------------- |
+| `make up`       | Start Odoo + PostgreSQL containers                       |
+| `make down`     | Stop and remove containers (keeps volumes)               |
+| `make reset`    | Drop DB, recreate, install module + seed data            |
+| `make test`     | Run all Odoo unit tests (`--test-tags /label_calculator`)|
+| `make seed`     | Update module without dropping DB (re-seed `noupdate=0`) |
+| `make shell`    | Open interactive Odoo Python shell                       |
+| `make logs`     | Tail Odoo container logs                                 |
+| `make smoke`    | Run XML-RPC end-to-end smoke test                        |
+| `make build`    | Rebuild containers from scratch                          |
+| `make dev`      | Start environment + print useful commands                |
 
 ### Running Tests
 
-Run all tests:
 ```bash
-pytest
+# Run Odoo unit tests (23+ tests)
+make test
+
+# Full reset + test (clean state)
+make reset && make test
+
+# Run the XML-RPC smoke test (Odoo must be running)
+make smoke
 ```
 
-Run with coverage:
+### Resetting the Database
+
 ```bash
-pytest --cov=. --cov-report=html
+make reset
+# This will:
+#   1. docker compose down -v  (remove containers + volumes)
+#   2. Start fresh PostgreSQL + Odoo
+#   3. Install label_calculator with seed data
+#   4. Restart Odoo for normal operation
 ```
 
-Run specific test file:
+---
+
+## XML-RPC API Access
+
+The module can be accessed programmatically via Odoo's XML-RPC interface.
+
+### Configuration
+
+| Parameter | Default                  |
+| --------- | ------------------------ |
+| URL       | `http://localhost:8069`  |
+| Database  | `odoo_label`             |
+| User      | `admin`                  |
+| Password  | `admin`                  |
+
+### Using the RPC Client
+
 ```bash
-pytest path/to/test_file.py
+# Run the interactive demo
+python scripts/odoo_rpc.py
+
+# Use as a library
+python -c "
+from scripts.odoo_rpc import OdooRPC
+rpc = OdooRPC()
+rpc.connect()
+products = rpc.search_read('product.template',
+    [('pricing_type', '=', 'calculator')], ['name'])
+print(products)
+"
 ```
 
-### Test Requirements
+### Smoke Test
 
-- All new features must include tests
-- Maintain or improve code coverage
-- Tests must pass before submitting PR
-
-## Submitting Changes
-
-### Commit Messages
-
-Use clear, descriptive commit messages:
-
-```
-feat: add label printing feature
-
-- Implement print action
-- Add print date tracking
-- Update documentation
+```bash
+# Runs all checks: seed data, create SO, confirm, invoice
+python scripts/smoke_test.py
+# or
+make smoke
 ```
 
-Commit message prefixes:
-- `feat:` - New feature
-- `fix:` - Bug fix
-- `docs:` - Documentation changes
-- `style:` - Code style changes
-- `refactor:` - Code refactoring
-- `test:` - Test additions or changes
-- `chore:` - Build process or auxiliary tool changes
+The smoke test verifies:
+1. Seed data is present (groups, materials, tiers, products)
+2. A customer can be created
+3. A sale order with calculator pricing can be created
+4. Price calculation populates all fields (price, breakdown, costs)
+5. The order can be confirmed
+6. An invoice can be generated with correct fields
 
-### Pull Request Process
+---
 
-1. Ensure all tests pass
-2. Update documentation if needed
-3. Run code quality checks:
-   ```bash
-   black .
-   isort .
-   flake8 .
-   pylint **/*.py
-   ```
-4. Push to your fork
-5. Create a pull request with:
-   - Clear title describing the change
-   - Detailed description of what changed and why
-   - Reference to any related issues
-   - Screenshots for UI changes
+## Key Odoo 19 Differences (vs older versions)
 
-### Pull Request Template
+- Use `<list>` **NOT** `<tree>` in XML views
+- Use `target="main"` **NOT** `target="inline"` for settings actions
+- `<search>` views: no `expand` attribute on `<group>`
+- `<app>` tag in settings: use `name="module_name"` **NOT** `data-key`
+- `groups="base.group_multi_currency"` does **NOT** exist in Community
+- `groups="account.group_account_basic"` does **NOT** exist in Community
 
-```markdown
-## Description
-Brief description of changes
+## Project Conventions
 
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Documentation update
+- **File naming:** `label_machine.py`, `label_material.py` – no `_ext` suffix
+- **Database:** single `odoo_label` database for dev and test
+- **Seed data:** `data/default_data.xml` with `noupdate="1"`
+- **No third-party modules:** only our `label_calculator` module
+- **Docker Compose v2:** use `docker compose` (space) not `docker-compose`
+- **Container names:** `odoo-label` (Odoo), `odoo-label-db` (PostgreSQL)
 
-## Testing
-- [ ] Tests added/updated
-- [ ] All tests pass
-- [ ] Code quality checks pass
+---
 
-## Screenshots (if applicable)
-Add screenshots here
+## Module Structure
 
-## Related Issues
-Fixes #123
+```
+addons/label_calculator/
+├── __manifest__.py
+├── __init__.py
+├── models/
+│   ├── __init__.py
+│   ├── label_machine.py
+│   ├── label_material_group.py
+│   ├── label_material.py
+│   ├── label_production_tier.py
+│   ├── label_material_tier_override.py
+│   ├── label_calculator.py          # Core calculation engine
+│   ├── product_template.py
+│   ├── sale_order.py
+│   ├── sale_order_line.py
+│   ├── account_move.py
+│   ├── account_move_line.py
+│   ├── partner_discount_tier.py
+│   ├── res_partner.py
+│   └── res_config_settings.py
+├── views/
+│   ├── label_machine_views.xml
+│   ├── label_material_group_views.xml
+│   ├── label_material_views.xml
+│   ├── label_production_tier_views.xml
+│   ├── product_template_views.xml
+│   ├── sale_order_line_views.xml
+│   ├── account_move_views.xml
+│   ├── partner_discount_tier_views.xml
+│   ├── res_partner_views.xml
+│   ├── res_config_settings_views.xml
+│   └── menu.xml
+├── security/
+│   └── ir.model.access.csv
+├── data/
+│   └── default_data.xml
+└── tests/
+    ├── __init__.py
+    └── test_calculator.py           # 23+ tests
 ```
 
-## Code Review Process
+## Calculation Logic Overview
 
-### Review Checklist
+- Materials have types: **area** (mm²), **length** (mm), **time** (seconds), **pieces**
+- Waste formula: `1 / (1 - waste_pct / 100)` (NOT `1 + waste_pct / 100`)
+- Margin formula: `raw_cost * (1 + margin_pct / 100)` (320% = ×4.2)
+- Income tax: `cost / (1 - tax_pct / 100)` (15% → /0.85)
+- Rounding: `math.ceil(price * 10) / 10` (always up to 10 haléřů)
+- Addon materials (`is_addon=True`): only material cost, no labor
+- Time addons: `seconds × machine.hourly_amortization / 3600`
 
-Reviewers will check:
-- Code follows style guidelines
-- Tests are present and passing
-- Documentation is updated
-- No security vulnerabilities
-- Performance considerations
-- Compatibility with Odoo 19
+---
 
-### Addressing Feedback
+## Development Workflow
 
-- Respond to all review comments
-- Make requested changes
-- Push updates to the same branch
-- Request re-review when ready
-
-## Additional Resources
-
-- [Odoo 19 Documentation](https://www.odoo.com/documentation/19.0/)
-- [OCA Guidelines](https://github.com/OCA/odoo-community.org)
-- [Python PEP 8](https://www.python.org/dev/peps/pep-0008/)
-- [Agent Skills Documentation](.github/agents/python-odoo-skills.md)
-
-## Getting Help
-
-- Check existing documentation
-- Review the example module
-- Ask questions in pull request discussions
-- Contact maintainers
-
-## License
-
-By contributing, you agree that your contributions will be licensed under the LGPL-3 license.
-
-Thank you for contributing! 🎉
+1. Create a feature branch
+2. Make changes following Odoo 19 and Python conventions
+3. Run `make test` to verify unit tests pass
+4. Run `make smoke` to verify end-to-end flow
+5. Submit a pull request
