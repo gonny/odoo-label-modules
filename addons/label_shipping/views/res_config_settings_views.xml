@@ -7,7 +7,7 @@
     <field name="inherit_id" ref="base.res_config_settings_view_form"/>
     <field name="arch" type="xml">
       <xpath expr="//form" position="inside">
-        <app data-string="Label Shipping" string="Zásilky" name="label_shipping" groups="base.group_system">
+        <app string="Zásilky" name="label_shipping" groups="base.group_system">
 
           <block title="Packeta (Zásilkovna)" name="shipping_packeta_settings">
             <setting id="shipping_packeta_key_setting" string="API Key" help="Klíč pro přístup k Packeta API">
