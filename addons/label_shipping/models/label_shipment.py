@@ -258,6 +258,38 @@ class LabelShipment(models.Model):
             }
         return payload
 
+    def _validate_packeta_fields(self):
+        """Validate required fields for Packeta API before sending.
+
+        Returns:
+            Error message string if validation fails, or False if OK.
+        """
+        self.ensure_one()
+        partner = self.partner_shipping_id or self.partner_id
+        missing = []
+        if not (partner.email or "").strip():
+            missing.append("email")
+        if not (partner.phone or "").strip():
+            missing.append("telefon")
+        if not (partner.name or "").strip():
+            missing.append("jméno příjemce")
+        if not self.pickup_point_id:
+            # Home delivery requires carrier service code + address
+            if not (self.carrier_service_code or "").strip():
+                missing.append("kód služby dopravce (carrierId)")
+            if not (partner.street or "").strip():
+                missing.append("ulice")
+            if not (partner.city or "").strip():
+                missing.append("město")
+            if not (partner.zip or "").strip():
+                missing.append("PSČ")
+        if missing:
+            return (
+                "Chybí povinné údaje pro Packeta API: "
+                + ", ".join(missing) + "."
+            )
+        return False
+
     def action_api_send(self):
         """Send shipment via carrier API.
 
@@ -280,6 +312,13 @@ class LabelShipment(models.Model):
             result = ""
 
             if shipment.carrier_type == "packeta":
+                validation_error = shipment._validate_packeta_fields()
+                if validation_error:
+                    shipment.write({
+                        "state": "error",
+                        "error_message": validation_error,
+                    })
+                    continue
                 from ..services import packeta_api
                 data = shipment._prepare_packeta_data()
                 success, result = packeta_api.create_packet(

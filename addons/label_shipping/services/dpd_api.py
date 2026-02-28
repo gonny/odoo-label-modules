@@ -24,6 +24,9 @@ def _headers(api_key):
 def create_shipment(api_key, dsw, data, test_mode=False):
     """Create a shipment via DPD GeoAPI v1.
 
+    The /v1/shipments endpoint expects the payload as an array of shipment
+    objects, not a single object.
+
     Args:
         api_key: DPD API key.
         dsw: DPD DSW customer identifier.
@@ -38,11 +41,21 @@ def create_shipment(api_key, dsw, data, test_mode=False):
         payload = dict(data)
         if "customer" not in payload:
             payload["customer"] = {"dsw": dsw}
+        # DPD /v1/shipments expects an array of shipment objects
+        body = [payload]
+        _logger.info("DPD API request: POST %s body=%s", url, body)
         response = requests.post(
-            url, json=payload, headers=_headers(api_key), timeout=30,
+            url, json=body, headers=_headers(api_key), timeout=30,
+        )
+        _logger.info(
+            "DPD API response: %s %s",
+            response.status_code, response.text[:500],
         )
         if response.status_code in (200, 201):
             result = response.json()
+            # Response is an array; return first element
+            if isinstance(result, list) and result:
+                return True, result[0]
             return True, result
         return False, f"HTTP {response.status_code}: {response.text[:500]}"
     except requests.RequestException as e:
@@ -64,8 +77,13 @@ def get_labels(api_key, parcel_ident, test_mode=False):
     try:
         url = f"{_base_url(test_mode)}/parcels/{parcel_ident}/labels"
         payload = {"printType": "pdf", "printFormat": "A6"}
+        _logger.info("DPD API request: POST %s body=%s", url, payload)
         response = requests.post(
             url, json=payload, headers=_headers(api_key), timeout=30,
+        )
+        _logger.info(
+            "DPD API response: %s (content_length=%s)",
+            response.status_code, len(response.content),
         )
         if response.status_code == 200:
             return True, response.content
@@ -88,7 +106,12 @@ def cancel_shipment(api_key, shipment_id, test_mode=False):
     """
     try:
         url = f"{_base_url(test_mode)}/shipments/{shipment_id}"
+        _logger.info("DPD API request: DELETE %s", url)
         response = requests.delete(url, headers=_headers(api_key), timeout=30)
+        _logger.info(
+            "DPD API response: %s %s",
+            response.status_code, response.text[:500],
+        )
         if response.status_code in (200, 204):
             return True, {"status": "cancelled"}
         return False, f"HTTP {response.status_code}: {response.text[:500]}"

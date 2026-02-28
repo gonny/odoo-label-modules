@@ -566,3 +566,103 @@ class TestLabelShipment(TransactionCase):
         })
         params = shipment._get_carrier_api_params()
         self.assertFalse(params["test_mode"])
+
+    # ── DPD array payload ─────────────────────────────────────────
+
+    def test_dpd_api_sends_array_payload(self):
+        """Test that DPD create_shipment wraps payload in an array."""
+        from unittest.mock import MagicMock
+        from odoo.addons.label_shipping.services import dpd_api
+
+        with patch(
+            "odoo.addons.label_shipping.services.dpd_api.requests.post"
+        ) as mock_post:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = [{
+                "shipmentId": "SH1",
+                "parcels": [{"parcelIdent": "P1", "parcelNumber": "N1"}],
+            }]
+            mock_response.text = '[]'
+            mock_post.return_value = mock_response
+
+            success, result = dpd_api.create_shipment(
+                "key", "dsw", {"parcels": [{"weight": 500}]},
+            )
+            # Verify the json= arg was an array (list)
+            call_kwargs = mock_post.call_args
+            json_body = call_kwargs.kwargs.get(
+                "json", call_kwargs[1].get("json"),
+            )
+            self.assertIsInstance(json_body, list)
+            self.assertEqual(len(json_body), 1)
+            self.assertTrue(success)
+
+    def test_dpd_api_unwraps_array_response(self):
+        """Test that DPD create_shipment unwraps array response."""
+        from unittest.mock import MagicMock
+        from odoo.addons.label_shipping.services import dpd_api
+
+        with patch(
+            "odoo.addons.label_shipping.services.dpd_api.requests.post"
+        ) as mock_post:
+            mock_response = MagicMock()
+            mock_response.status_code = 200
+            mock_response.json.return_value = [{
+                "shipmentId": "SH99",
+                "parcels": [{"parcelIdent": "P99", "parcelNumber": "N99"}],
+            }]
+            mock_response.text = '[]'
+            mock_post.return_value = mock_response
+
+            success, result = dpd_api.create_shipment(
+                "key", "dsw", {"parcels": [{"weight": 500}]},
+            )
+            self.assertTrue(success)
+            # Result should be the unwrapped first element, not array
+            self.assertIsInstance(result, dict)
+            self.assertEqual(result["shipmentId"], "SH99")
+
+    # ── Packeta field validation ──────────────────────────────────
+
+    def test_packeta_validation_missing_email(self):
+        """Test Packeta validation catches missing email."""
+        addr = self.env["res.partner"].create({
+            "name": "No Email",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+            "label_preferred_carrier": "packeta",
+            "label_pickup_point_id": "12345",
+        })
+        so = self._create_sale_order(shipping_addr=addr)
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+            "pickup_point_id": "12345",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.packeta_api_password", "test_pass")
+        shipment.action_api_send()
+        self.assertEqual(shipment.state, "error")
+        self.assertIn("email", shipment.error_message)
+
+    def test_packeta_validation_hd_missing_address(self):
+        """Test Packeta HD validation catches missing address fields."""
+        addr = self.env["res.partner"].create({
+            "name": "No Address",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+            "email": "test@example.com",
+            "phone": "+420123456789",
+            "label_preferred_carrier": "packeta",
+        })
+        so = self._create_sale_order(shipping_addr=addr)
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.packeta_api_password", "test_pass")
+        shipment.action_api_send()
+        self.assertEqual(shipment.state, "error")
+        self.assertIn("kód služby", shipment.error_message)

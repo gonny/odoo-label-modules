@@ -96,11 +96,16 @@ def create_packet(api_password, data, pickup_point_id=None):
         xml_body = _build_create_packet_xml(
             api_password, data, pickup_point_id,
         )
+        _logger.info("Packeta API request: %s", xml_body)
         response = requests.post(
             API_URL,
             data=xml_body.encode("utf-8"),
             headers={"Content-Type": "text/xml; charset=utf-8"},
             timeout=30,
+        )
+        _logger.info(
+            "Packeta API response: %s %s",
+            response.status_code, response.text[:500],
         )
         if response.status_code == 200:
             return _parse_response(response.text)
@@ -128,11 +133,16 @@ def get_packet_label(api_password, packet_id):
         ET.SubElement(root, "offset").text = "0"
 
         xml_body = ET.tostring(root, encoding="unicode", xml_declaration=True)
+        _logger.info("Packeta API label request: %s", xml_body)
         response = requests.post(
             API_URL,
             data=xml_body.encode("utf-8"),
             headers={"Content-Type": "text/xml; charset=utf-8"},
             timeout=30,
+        )
+        _logger.info(
+            "Packeta API label response: %s (content_length=%s)",
+            response.status_code, len(response.text),
         )
         if response.status_code == 200:
             resp_root = ET.fromstring(response.text)
@@ -166,11 +176,16 @@ def cancel_packet(api_password, packet_id):
         ET.SubElement(root, "packetId").text = str(packet_id)
 
         xml_body = ET.tostring(root, encoding="unicode", xml_declaration=True)
+        _logger.info("Packeta API cancel request: %s", xml_body)
         response = requests.post(
             API_URL,
             data=xml_body.encode("utf-8"),
             headers={"Content-Type": "text/xml; charset=utf-8"},
             timeout=30,
+        )
+        _logger.info(
+            "Packeta API cancel response: %s %s",
+            response.status_code, response.text[:500],
         )
         if response.status_code == 200:
             return _parse_response(response.text)
