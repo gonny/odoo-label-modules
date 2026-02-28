@@ -170,6 +170,9 @@ class LabelShipment(models.Model):
                     "label_shipping.dpd_api_key", "",
                 ),
                 "dsw": ICP.get_param("label_shipping.dpd_api_dsw", ""),
+                "test_mode": ICP.get_param(
+                    "label_shipping.dpd_test_mode", "True",
+                ) in ("True", "1"),
             }
         elif self.carrier_type == "czech_post":
             return {
@@ -320,6 +323,7 @@ class LabelShipment(models.Model):
                 data = shipment._prepare_dpd_data()
                 success, result = dpd_api.create_shipment(
                     params["api_key"], params["dsw"], data,
+                    test_mode=params.get("test_mode", True),
                 )
                 if success and isinstance(result, (dict, list)):
                     # DPD returns list of shipment results
@@ -387,6 +391,7 @@ class LabelShipment(models.Model):
                 from ..services import dpd_api
                 success, result = dpd_api.get_labels(
                     params["api_key"], [shipment.tracking_number],
+                    test_mode=params.get("test_mode", True),
                 )
             elif shipment.carrier_type == "czech_post":
                 from ..services import czech_post_api
@@ -432,6 +437,7 @@ class LabelShipment(models.Model):
                 from ..services import dpd_api
                 success, result = dpd_api.get_tracking(
                     params["api_key"], shipment.tracking_number,
+                    test_mode=params.get("test_mode", True),
                 )
             elif shipment.carrier_type == "czech_post":
                 from ..services import czech_post_api
@@ -479,6 +485,7 @@ class LabelShipment(models.Model):
                 from ..services import dpd_api
                 success, result = dpd_api.cancel_shipment(
                     params["api_key"], shipment.tracking_number,
+                    test_mode=params.get("test_mode", True),
                 )
             elif shipment.carrier_type == "czech_post":
                 from ..services import czech_post_api

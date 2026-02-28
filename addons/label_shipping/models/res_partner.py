@@ -29,7 +29,13 @@ class ResPartner(models.Model):
     )
 
     def action_open_pickup_widget(self):
-        """Open carrier-specific pickup point selection widget in new tab."""
+        """Open carrier-specific pickup point selection widget in new tab.
+
+        LIMITATION: This opens the widget in a new browser tab. The user must
+        manually copy the pickup point ID back to Odoo. A future enhancement
+        will implement an OWL component with iframe + postMessage to auto-fill
+        the pickup point fields.
+        """
         self.ensure_one()
         urls = {
             "packeta": "https://widget.packeta.com/v6/",

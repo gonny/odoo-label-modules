@@ -28,3 +28,8 @@ class ResConfigSettings(models.TransientModel):
         string="Česká pošta Secret Key",
         config_parameter="label_shipping.czech_post_secret_key",
     )
+    shipping_dpd_test_mode = fields.Boolean(
+        string="DPD Test Mode",
+        config_parameter="label_shipping.dpd_test_mode",
+        default=True,
+    )

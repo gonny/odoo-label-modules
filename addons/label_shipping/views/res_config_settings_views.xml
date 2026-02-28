@@ -7,7 +7,7 @@
     <field name="inherit_id" ref="base.res_config_settings_view_form"/>
     <field name="arch" type="xml">
       <xpath expr="//form" position="inside">
-        <app string="Zásilky" name="label_shipping" groups="base.group_system">
+        <app data-string="Zásilky" string="Zásilky" name="label_shipping" groups="base.group_system">
 
           <block title="Packeta (Zásilkovna)" name="shipping_packeta_settings">
             <setting id="shipping_packeta_key_setting" string="API Key" help="Klíč pro přístup k Packeta API">
@@ -24,6 +24,9 @@
             </setting>
             <setting id="shipping_dpd_dsw_setting" string="API DSW" help="DSW token pro DPD API">
               <field name="shipping_dpd_api_dsw" password="True"/>
+            </setting>
+            <setting id="shipping_dpd_test_mode_setting" string="Test Mode" help="Používat testovací DPD API endpoint místo produkčního">
+              <field name="shipping_dpd_test_mode"/>
             </setting>
           </block>
 

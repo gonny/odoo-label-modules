@@ -5,6 +5,12 @@ _logger = logging.getLogger(__name__)
 
 API_BASE_URL = "https://www.zasilkovna.cz/api/rest"
 
+# NOTE: The endpoint paths below (e.g. /packet/{id}/label/pdf,
+# /packet/{id}/tracking) are based on available documentation and
+# community integrations. They should be verified against the official
+# Packeta REST API docs: https://docs.packeta.com/docs/getting-started/packeta-api
+# If the endpoints are wrong, update the URL patterns in each function below.
+
 
 def create_packet(api_key, api_password, data):
     """Create a packet (shipment) via Packeta REST API.

@@ -36,6 +36,10 @@
       <field name="key">label_shipping.czech_post_secret_key</field>
       <field name="value"></field>
     </record>
+    <record id="config_dpd_test_mode" model="ir.config_parameter">
+      <field name="key">label_shipping.dpd_test_mode</field>
+      <field name="value">True</field>
+    </record>
 
   </data>
 </odoo>

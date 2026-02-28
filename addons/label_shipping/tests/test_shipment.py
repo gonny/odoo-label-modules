@@ -370,3 +370,219 @@ class TestLabelShipment(TransactionCase):
         result = addr.action_open_pickup_widget()
         self.assertEqual(result["type"], "ir.actions.act_url")
         self.assertIn("cpost", result["url"])
+
+    def test_shipment_cancel_from_sent(self):
+        """Test cancelling a shipment that is in 'sent' state."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        shipment.action_send()
+        self.assertEqual(shipment.state, "sent")
+        shipment.action_cancel()
+        self.assertEqual(shipment.state, "cancelled")
+
+    def test_shipment_reset_from_error(self):
+        """Test resetting a shipment from 'error' state to 'draft'."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        shipment.write({"state": "error", "error_message": "Test error"})
+        self.assertEqual(shipment.state, "error")
+        shipment.action_reset_to_draft()
+        self.assertEqual(shipment.state, "draft")
+
+    def test_tracking_url_dpd(self):
+        """Test tracking URL computation for DPD carrier."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+            "tracking_number": "DPD999",
+        })
+        self.assertIn("DPD999", shipment.tracking_url)
+        self.assertIn("dpd.de", shipment.tracking_url)
+
+    def test_tracking_url_czech_post(self):
+        """Test tracking URL computation for Czech Post carrier."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "czech_post",
+            "tracking_number": "CP999",
+        })
+        self.assertIn("CP999", shipment.tracking_url)
+        self.assertIn("postaonline", shipment.tracking_url)
+
+    def test_tracking_url_empty_when_no_number(self):
+        """Test tracking URL is empty when no tracking number."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        self.assertFalse(shipment.tracking_url)
+
+    def test_action_view_shipments(self):
+        """Test view shipments action from sale order."""
+        so = self._create_sale_order()
+        self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+        })
+        so.invalidate_recordset()
+        action = so.action_view_shipments()
+        self.assertEqual(action["res_model"], "label.shipment")
+        self.assertEqual(action["view_mode"], "list,form")
+
+    def test_action_view_shipments_single(self):
+        """Test view shipments opens form when only one shipment."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        so.invalidate_recordset()
+        action = so.action_view_shipments()
+        self.assertEqual(action["view_mode"], "form")
+        self.assertEqual(action["res_id"], shipment.id)
+
+    def test_download_label_dpd_mocked(self):
+        """Test downloading DPD label PDF with mocked response."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+            "tracking_number": "DPD123",
+            "state": "sent",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.dpd_api_key", "test_key")
+        ICP.set_param("label_shipping.dpd_api_dsw", "test_dsw")
+
+        with patch(
+            "odoo.addons.label_shipping.services.dpd_api.get_labels"
+        ) as mock_label:
+            mock_label.return_value = (True, b"%PDF-1.4 dpd label")
+            shipment.action_download_label()
+        self.assertTrue(shipment.label_pdf)
+
+    def test_download_label_czech_post_mocked(self):
+        """Test downloading Czech Post label PDF with mocked response."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "czech_post",
+            "tracking_number": "CP123",
+            "state": "sent",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.czech_post_api_key", "test_key")
+        ICP.set_param("label_shipping.czech_post_secret_key", "test_secret")
+
+        with patch(
+            "odoo.addons.label_shipping.services.czech_post_api"
+            ".get_shipment_label"
+        ) as mock_label:
+            mock_label.return_value = (True, b"%PDF-1.4 cp label")
+            shipment.action_download_label()
+        self.assertTrue(shipment.label_pdf)
+
+    def test_api_cancel_dpd_mocked(self):
+        """Test cancelling a DPD shipment via API with mocked response."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+            "tracking_number": "DPD123",
+            "state": "sent",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.dpd_api_key", "test_key")
+        ICP.set_param("label_shipping.dpd_api_dsw", "test_dsw")
+
+        with patch(
+            "odoo.addons.label_shipping.services.dpd_api.cancel_shipment"
+        ) as mock_cancel:
+            mock_cancel.return_value = (True, {"status": "cancelled"})
+            shipment.action_api_cancel()
+        self.assertEqual(shipment.state, "cancelled")
+
+    def test_api_cancel_czech_post_mocked(self):
+        """Test cancelling Czech Post shipment via API with mocked response."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "czech_post",
+            "tracking_number": "CP123",
+            "state": "sent",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.czech_post_api_key", "test_key")
+        ICP.set_param("label_shipping.czech_post_secret_key", "test_secret")
+
+        with patch(
+            "odoo.addons.label_shipping.services.czech_post_api"
+            ".cancel_shipment"
+        ) as mock_cancel:
+            mock_cancel.return_value = (True, {"status": "cancelled"})
+            shipment.action_api_cancel()
+        self.assertEqual(shipment.state, "cancelled")
+
+    def test_pickup_point_fields_persist(self):
+        """Test that pickup point fields on delivery address persist."""
+        addr = self.env["res.partner"].create({
+            "name": "Test Persist",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+            "label_preferred_carrier": "packeta",
+            "label_pickup_point_id": "99999",
+            "label_pickup_point_name": "Test Point",
+        })
+        # Re-read from database
+        addr.invalidate_recordset()
+        addr_reloaded = self.env["res.partner"].browse(addr.id)
+        self.assertEqual(addr_reloaded.label_pickup_point_id, "99999")
+        self.assertEqual(addr_reloaded.label_pickup_point_name, "Test Point")
+
+    def test_download_label_no_tracking_number(self):
+        """Test downloading label fails when no tracking number."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        shipment.action_download_label()
+        self.assertEqual(shipment.state, "error")
+        self.assertTrue(shipment.error_message)
+
+    def test_dpd_test_mode_setting(self):
+        """Test DPD test mode config parameter."""
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.dpd_test_mode", "True")
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+        })
+        params = shipment._get_carrier_api_params()
+        self.assertTrue(params["test_mode"])
+
+    def test_dpd_test_mode_disabled(self):
+        """Test DPD test mode returns False when disabled."""
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.dpd_test_mode", "False")
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+        })
+        params = shipment._get_carrier_api_params()
+        self.assertFalse(params["test_mode"])
