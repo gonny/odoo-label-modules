@@ -285,8 +285,8 @@ class LabelShipment(models.Model):
                 missing.append("PSČ")
         if missing:
             return (
-                "Chybí povinné údaje pro Packeta API: "
-                + ", ".join(missing) + "."
+                f"Chybí povinné údaje pro Packeta API: "
+                f"{', '.join(missing)}."
             )
         return False
 
