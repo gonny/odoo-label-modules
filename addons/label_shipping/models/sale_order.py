@@ -5,9 +5,9 @@ class SaleOrder(models.Model):
     _inherit = "sale.order"
 
     # Related fields from shipping address
-    label_shipping_carrier = fields.Char(
-        string="Dopravce",
+    label_shipping_carrier = fields.Selection(
         related="partner_shipping_id.label_preferred_carrier",
+        string="Dopravce",
         readonly=True,
     )
     label_shipping_service = fields.Char(

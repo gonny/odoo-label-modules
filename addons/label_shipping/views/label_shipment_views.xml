@@ -108,10 +108,8 @@
         <filter name="filter_cancelled" string="Zrušeno" domain="[('state', '=', 'cancelled')]"/>
         <filter name="filter_error" string="Chyba" domain="[('state', '=', 'error')]"/>
         <separator/>
-        <group string="Seskupit podle">
-          <filter name="group_carrier" string="Dopravce" context="{'group_by': 'carrier_type'}"/>
-          <filter name="group_state" string="Stav" context="{'group_by': 'state'}"/>
-        </group>
+        <filter name="group_carrier" string="Dopravce" context="{'group_by': 'carrier_type'}"/>
+        <filter name="group_state" string="Stav" context="{'group_by': 'state'}"/>
       </search>
     </field>
   </record>
