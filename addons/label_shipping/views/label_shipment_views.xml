@@ -30,17 +30,23 @@
     <field name="arch" type="xml">
       <form>
         <header>
-          <button name="action_send" type="object"
-                  string="Odeslat" class="btn-primary"
+          <button name="action_api_send" type="object"
+                  string="Odeslat přes API" class="btn-primary"
                   invisible="state != 'draft'"/>
-          <button name="action_in_transit" type="object"
-                  string="Sledovat" class="btn-primary"
-                  invisible="state != 'sent'"/>
-          <button name="action_deliver" type="object"
-                  string="Doručeno" class="btn-primary"
-                  invisible="state != 'in_transit'"/>
+          <button name="action_send" type="object"
+                  string="Označit odesláno" class="btn-secondary"
+                  invisible="state != 'draft'"/>
+          <button name="action_download_label" type="object"
+                  string="Stáhnout štítek"
+                  invisible="state not in ('sent', 'in_transit')"/>
+          <button name="action_api_track" type="object"
+                  string="Aktualizovat stav"
+                  invisible="state not in ('sent', 'in_transit')"/>
+          <button name="action_api_cancel" type="object"
+                  string="Zrušit (API)"
+                  invisible="state not in ('draft', 'sent', 'in_transit')"/>
           <button name="action_cancel" type="object"
-                  string="Zrušit"
+                  string="Zrušit (ruční)"
                   invisible="state not in ('draft', 'sent', 'in_transit')"/>
           <button name="action_reset_to_draft" type="object"
                   string="Zpět na koncept"

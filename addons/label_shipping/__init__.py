@@ -1,6 +1,7 @@
 import os
 
 from . import models
+from . import services
 
 
 def _post_init_shipping(env):
