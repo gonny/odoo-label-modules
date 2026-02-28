@@ -27,3 +27,30 @@ class ResPartner(models.Model):
         string="Název výdejního místa",
         help="Lidsky čitelný název výdejního místa.",
     )
+
+    def action_open_pickup_widget(self):
+        """Open carrier-specific pickup point selection widget in new tab."""
+        self.ensure_one()
+        urls = {
+            "packeta": "https://widget.packeta.com/v6/",
+            "dpd": "https://pickup.dpd.cz",
+            "czech_post": "https://b2c.cpost.cz/locations/?type=BALIKOVNY",
+        }
+        carrier = self.label_preferred_carrier
+        url = urls.get(carrier)
+        if not url:
+            return {
+                "type": "ir.actions.client",
+                "tag": "display_notification",
+                "params": {
+                    "title": "Chyba",
+                    "message": "Nejprve vyberte dopravce.",
+                    "type": "warning",
+                    "sticky": False,
+                },
+            }
+        return {
+            "type": "ir.actions.act_url",
+            "url": url,
+            "target": "new",
+        }

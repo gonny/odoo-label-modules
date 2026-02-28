@@ -327,3 +327,46 @@ class TestLabelShipment(TransactionCase):
             mock_cancel.return_value = (True, {"status": "cancelled"})
             shipment.action_api_cancel()
         self.assertEqual(shipment.state, "cancelled")
+
+    def test_action_open_pickup_widget_packeta(self):
+        """Test opening Packeta pickup widget."""
+        result = self.delivery_address.action_open_pickup_widget()
+        self.assertEqual(result["type"], "ir.actions.act_url")
+        self.assertIn("packeta", result["url"])
+        self.assertEqual(result["target"], "new")
+
+    def test_action_open_pickup_widget_no_carrier(self):
+        """Test opening pickup widget with no carrier shows notification."""
+        addr = self.env["res.partner"].create({
+            "name": "No Carrier",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+            "label_preferred_carrier": "none",
+        })
+        result = addr.action_open_pickup_widget()
+        self.assertEqual(result["type"], "ir.actions.client")
+        self.assertEqual(result["tag"], "display_notification")
+
+    def test_action_open_pickup_widget_dpd(self):
+        """Test opening DPD pickup widget."""
+        addr = self.env["res.partner"].create({
+            "name": "DPD Address",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+            "label_preferred_carrier": "dpd",
+        })
+        result = addr.action_open_pickup_widget()
+        self.assertEqual(result["type"], "ir.actions.act_url")
+        self.assertIn("dpd", result["url"])
+
+    def test_action_open_pickup_widget_czech_post(self):
+        """Test opening Czech Post pickup widget."""
+        addr = self.env["res.partner"].create({
+            "name": "CP Address",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+            "label_preferred_carrier": "czech_post",
+        })
+        result = addr.action_open_pickup_widget()
+        self.assertEqual(result["type"], "ir.actions.act_url")
+        self.assertIn("cpost", result["url"])

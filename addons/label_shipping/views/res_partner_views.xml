@@ -14,6 +14,12 @@
               <field name="label_carrier_service"/>
             </group>
             <group string="Výdejní místo">
+              <button name="action_open_pickup_widget"
+                      type="object"
+                      string="Vybrat výdejní místo"
+                      class="btn-link"
+                      icon="fa-map-marker"
+                      invisible="label_preferred_carrier in ('none', False)"/>
               <field name="label_pickup_point_id"/>
               <field name="label_pickup_point_name"/>
             </group>
