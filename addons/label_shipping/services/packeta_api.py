@@ -22,7 +22,7 @@ def create_packet(api_key, api_password, data):
         payload = dict(data)
         payload["apiPassword"] = api_password
         response = requests.post(
-            f"{API_BASE_URL}",
+            API_BASE_URL,
             json=payload,
             headers={"Content-Type": "application/json"},
             timeout=30,

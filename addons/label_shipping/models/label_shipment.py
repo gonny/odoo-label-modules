@@ -199,7 +199,8 @@ class LabelShipment(models.Model):
             "phone": partner.phone or "",
             "addressId": (
                 int(self.pickup_point_id)
-                if self.pickup_point_id and self.pickup_point_id.isdigit()
+                if self.pickup_point_id
+                and self.pickup_point_id.strip().isdigit()
                 else 0
             ),
             "value": self.sale_order_id.amount_total or 0,

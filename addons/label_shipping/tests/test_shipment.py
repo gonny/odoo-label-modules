@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from odoo.tests.common import TransactionCase
 
 
@@ -186,7 +188,6 @@ class TestLabelShipment(TransactionCase):
 
     def test_api_send_packeta_mocked(self):
         """Test Packeta API send with mocked response."""
-        from unittest.mock import patch
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].create({
             "sale_order_id": so.id,
@@ -208,7 +209,6 @@ class TestLabelShipment(TransactionCase):
 
     def test_api_send_dpd_mocked(self):
         """Test DPD API send with mocked response."""
-        from unittest.mock import patch
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].create({
             "sale_order_id": so.id,
@@ -230,7 +230,6 @@ class TestLabelShipment(TransactionCase):
 
     def test_api_send_czech_post_mocked(self):
         """Test Czech Post API send with mocked response."""
-        from unittest.mock import patch
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].create({
             "sale_order_id": so.id,
@@ -268,7 +267,6 @@ class TestLabelShipment(TransactionCase):
 
     def test_api_send_error_response(self):
         """Test API send handles error response gracefully."""
-        from unittest.mock import patch
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].create({
             "sale_order_id": so.id,
@@ -288,7 +286,6 @@ class TestLabelShipment(TransactionCase):
 
     def test_download_label_mocked(self):
         """Test downloading a label PDF with mocked response."""
-        from unittest.mock import patch
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].create({
             "sale_order_id": so.id,
@@ -313,7 +310,6 @@ class TestLabelShipment(TransactionCase):
 
     def test_api_cancel_mocked(self):
         """Test cancelling a shipment via API with mocked response."""
-        from unittest.mock import patch
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].create({
             "sale_order_id": so.id,
