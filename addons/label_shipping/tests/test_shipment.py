@@ -666,3 +666,61 @@ class TestLabelShipment(TransactionCase):
         shipment.action_api_send()
         self.assertEqual(shipment.state, "error")
         self.assertIn("kód služby", shipment.error_message)
+
+    # ── DPD payload structure ─────────────────────────────────────
+
+    def test_dpd_payload_has_shipment_type(self):
+        """Test DPD payload includes shipmentType field."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.dpd_api_key", "test_key")
+        ICP.set_param("label_shipping.dpd_api_dsw", "test_dsw")
+        data = shipment._prepare_dpd_data()
+        self.assertEqual(data["shipmentType"], "Standard")
+
+    def test_dpd_payload_has_sender_contact(self):
+        """Test DPD payload includes sender contact section."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "dpd",
+        })
+        ICP = self.env["ir.config_parameter"].sudo()
+        ICP.set_param("label_shipping.dpd_api_key", "test_key")
+        ICP.set_param("label_shipping.dpd_api_dsw", "test_dsw")
+        data = shipment._prepare_dpd_data()
+        self.assertIn("contact", data["sender"])
+        self.assertIn("name", data["sender"]["contact"])
+        self.assertIn("phone", data["sender"]["contact"])
+        self.assertIn("email", data["sender"]["contact"])
+
+    # ── Onchange sale_order_id ────────────────────────────────────
+
+    def test_onchange_sale_order_id_fills_carrier(self):
+        """Test that selecting a sale order auto-fills carrier info."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].new({
+            "carrier_type": "packeta",
+        })
+        shipment.sale_order_id = so
+        shipment._onchange_sale_order_id()
+        self.assertEqual(shipment.carrier_type, "packeta")
+        self.assertEqual(shipment.pickup_point_id, "12345")
+        self.assertEqual(
+            shipment.pickup_point_name, "Packeta Z-Box Praha",
+        )
+
+    def test_onchange_sale_order_id_hd(self):
+        """Test onchange fills carrier service code for HD."""
+        so = self._create_sale_order(shipping_addr=self.delivery_hd)
+        shipment = self.env["label.shipment"].new({
+            "carrier_type": "packeta",
+        })
+        shipment.sale_order_id = so
+        shipment._onchange_sale_order_id()
+        self.assertEqual(shipment.carrier_type, "packeta")
+        self.assertEqual(shipment.carrier_service_code, "106")

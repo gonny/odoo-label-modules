@@ -9,9 +9,8 @@
       <list>
         <field name="name"/>
         <field name="sale_order_id"/>
-        <field name="partner_id" string="Zákazník"/>
+        <field name="partner_id" string="Zákazník" bold="True"/>
         <field name="carrier_type"/>
-        <field name="carrier_service_code"/>
         <field name="tracking_number"/>
         <field name="state" widget="badge"
                decoration-info="state == 'draft'"
@@ -19,7 +18,6 @@
                decoration-primary="state == 'in_transit'"
                decoration-success="state == 'delivered'"
                decoration-danger="state in ('cancelled', 'error')"/>
-        <field name="weight"/>
       </list>
     </field>
   </record>

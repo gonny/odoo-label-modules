@@ -127,6 +127,24 @@ class LabelShipment(models.Model):
                 )
         return super().create(vals_list)
 
+    @api.onchange("sale_order_id")
+    def _onchange_sale_order_id(self):
+        """Auto-fill carrier info from the order's delivery address."""
+        if not self.sale_order_id:
+            return
+        addr = self.sale_order_id.partner_shipping_id
+        if not addr:
+            return
+        carrier = addr.label_preferred_carrier or "packeta"
+        if carrier == "none":
+            carrier = "packeta"
+        self.carrier_type = carrier
+        self.carrier_service_code = (
+            addr.label_carrier_service_code or ""
+        )
+        self.pickup_point_id = addr.label_pickup_point_id or ""
+        self.pickup_point_name = addr.label_pickup_point_name or ""
+
     def action_send(self):
         """Označit zásilku jako odesláno (ruční, bez API)."""
         for shipment in self:
@@ -207,6 +225,8 @@ class LabelShipment(models.Model):
         """Prepare payload for DPD GeoAPI v1 create shipment call.
 
         Weight is converted from kg to grams as required by DPD API.
+        Sender address and contact come from the company (env.company).
+        Country codes are ISO 3166-1 alpha-2 from partner/company country.
 
         Returns:
             Dict with shipment data for DPD API.
@@ -217,6 +237,7 @@ class LabelShipment(models.Model):
         params = self._get_carrier_api_params()
         weight_grams = round(self.weight * 1000)
         payload = {
+            "shipmentType": "Standard",
             "customer": {"dsw": params.get("dsw", "")},
             "sender": {
                 "address": {
@@ -228,6 +249,11 @@ class LabelShipment(models.Model):
                         if company.country_id
                         else "CZ"
                     ),
+                },
+                "contact": {
+                    "name": company.name or "",
+                    "phone": company.phone or "",
+                    "email": company.email or "",
                 },
             },
             "receiver": {

@@ -19,6 +19,10 @@
           </block>
 
           <block title="DPD" name="shipping_dpd_settings">
+            <div class="text-muted mb-2">
+              Pro správné fungování DPD API musí být vyplněna adresa firmy
+              (Nastavení → Společnosti → Adresa: ulice, město, PSČ, země = CZ).
+            </div>
             <setting id="shipping_dpd_key_setting" string="API Key" help="Klíč pro přístup k DPD API">
               <field name="shipping_dpd_api_key"/>
             </setting>
