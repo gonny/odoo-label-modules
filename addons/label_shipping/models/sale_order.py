@@ -9,6 +9,12 @@ class SaleOrder(models.Model):
         related="partner_shipping_id.label_preferred_carrier",
         string="Dopravce",
         readonly=True,
+        selection=[
+            ("none", "Žádný"),
+            ("packeta", "Packeta"),
+            ("dpd", "DPD"),
+            ("czech_post", "Česká pošta"),
+        ],
     )
     label_shipping_service = fields.Char(
         string="Služba dopravce",

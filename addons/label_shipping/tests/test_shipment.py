@@ -141,3 +141,45 @@ class TestLabelShipment(TransactionCase):
         self.assertEqual(
             so.label_shipping_pickup_point, "Packeta Z-Box Praha",
         )
+
+    def test_action_create_shipment(self):
+        """Test that action_create_shipment returns correct context."""
+        so = self._create_sale_order()
+        action = so.action_create_shipment()
+        self.assertEqual(action["res_model"], "label.shipment")
+        self.assertEqual(action["view_mode"], "form")
+        ctx = action["context"]
+        self.assertEqual(ctx["default_sale_order_id"], so.id)
+        self.assertEqual(ctx["default_carrier_type"], "packeta")
+        self.assertEqual(ctx["default_carrier_service"], "Z-Box")
+        self.assertEqual(ctx["default_pickup_point_id"], "12345")
+        self.assertEqual(
+            ctx["default_pickup_point_name"], "Packeta Z-Box Praha",
+        )
+
+    def test_action_create_shipment_no_carrier(self):
+        """Test action_create_shipment defaults to packeta when no carrier."""
+        addr_no_carrier = self.env["res.partner"].create({
+            "name": "No Carrier Delivery",
+            "type": "delivery",
+            "parent_id": self.partner.id,
+        })
+        so = self._create_sale_order()
+        so.partner_shipping_id = addr_no_carrier
+        action = so.action_create_shipment()
+        self.assertEqual(
+            action["context"]["default_carrier_type"], "packeta",
+        )
+
+    def test_shipment_sequence_format(self):
+        """Test that shipment sequence follows ZAS/XXXXX format."""
+        so = self._create_sale_order()
+        shipment = self.env["label.shipment"].create({
+            "sale_order_id": so.id,
+            "carrier_type": "packeta",
+        })
+        self.assertTrue(shipment.name.startswith("ZAS/"))
+        # Check padding: ZAS/ + 5 digits
+        seq_part = shipment.name.replace("ZAS/", "")
+        self.assertEqual(len(seq_part), 5)
+        self.assertTrue(seq_part.isdigit())
