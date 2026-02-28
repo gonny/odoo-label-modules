@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- Settings action -->
+  <record id="shipping_config_settings_action" model="ir.actions.act_window">
+    <field name="name">Nastavení zásilek</field>
+    <field name="res_model">res.config.settings</field>
+    <field name="view_mode">form</field>
+    <field name="target">main</field>
+    <field name="context">{'module': 'label_shipping'}</field>
+  </record>
+
+  <!-- ============ ROOT MENU ============ -->
+  <menuitem id="shipping_menu_root" name="Zásilky" sequence="95"/>
+
+  <!-- ============ SUB-MENUS ============ -->
+  <menuitem id="shipping_menu_shipments"
+            name="Všechny zásilky"
+            parent="shipping_menu_root"
+            action="label_shipment_action"
+            sequence="10"/>
+
+  <menuitem id="shipping_menu_config"
+            name="Nastavení"
+            parent="shipping_menu_root"
+            action="shipping_config_settings_action"
+            sequence="90"/>
+
+</odoo>

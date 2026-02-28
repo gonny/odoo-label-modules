@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <!-- ============ LIST VIEW ============ -->
+  <record id="label_shipment_view_list" model="ir.ui.view">
+    <field name="name">label.shipment.list</field>
+    <field name="model">label.shipment</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="name"/>
+        <field name="sale_order_id"/>
+        <field name="partner_id"/>
+        <field name="carrier_type"/>
+        <field name="tracking_number"/>
+        <field name="state" widget="badge"
+               decoration-info="state == 'draft'"
+               decoration-warning="state == 'sent'"
+               decoration-primary="state == 'in_transit'"
+               decoration-success="state == 'delivered'"
+               decoration-danger="state in ('cancelled', 'error')"/>
+        <field name="weight"/>
+      </list>
+    </field>
+  </record>
+
+  <!-- ============ FORM VIEW ============ -->
+  <record id="label_shipment_view_form" model="ir.ui.view">
+    <field name="name">label.shipment.form</field>
+    <field name="model">label.shipment</field>
+    <field name="arch" type="xml">
+      <form>
+        <header>
+          <button name="action_send" type="object"
+                  string="Odeslat" class="btn-primary"
+                  invisible="state != 'draft'"/>
+          <button name="action_in_transit" type="object"
+                  string="Sledovat" class="btn-primary"
+                  invisible="state != 'sent'"/>
+          <button name="action_deliver" type="object"
+                  string="Doručeno" class="btn-primary"
+                  invisible="state != 'in_transit'"/>
+          <button name="action_cancel" type="object"
+                  string="Zrušit"
+                  invisible="state not in ('draft', 'sent', 'in_transit')"/>
+          <button name="action_reset_to_draft" type="object"
+                  string="Zpět na koncept"
+                  invisible="state not in ('cancelled', 'error')"/>
+          <field name="state" widget="statusbar"
+                 statusbar_visible="draft,sent,in_transit,delivered"/>
+        </header>
+        <sheet>
+          <div class="oe_title">
+            <h1>
+              <field name="name" readonly="1"/>
+            </h1>
+          </div>
+          <group>
+            <group string="Objednávka">
+              <field name="sale_order_id"/>
+              <field name="partner_id"/>
+              <field name="partner_shipping_id"/>
+            </group>
+            <group string="Dopravce">
+              <field name="carrier_type"/>
+              <field name="carrier_service"/>
+              <field name="weight"/>
+            </group>
+          </group>
+          <group>
+            <group string="Výdejní místo">
+              <field name="pickup_point_id"/>
+              <field name="pickup_point_name"/>
+            </group>
+            <group string="Sledování">
+              <field name="tracking_number"/>
+              <field name="tracking_url" widget="url"/>
+            </group>
+          </group>
+          <group>
+            <group string="Štítek">
+              <field name="label_pdf" filename="label_pdf_filename"/>
+              <field name="label_pdf_filename" invisible="1"/>
+            </group>
+            <group string="Chyba" invisible="state != 'error'">
+              <field name="error_message"/>
+            </group>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <!-- ============ SEARCH VIEW ============ -->
+  <record id="label_shipment_view_search" model="ir.ui.view">
+    <field name="name">label.shipment.search</field>
+    <field name="model">label.shipment</field>
+    <field name="arch" type="xml">
+      <search>
+        <field name="name"/>
+        <field name="sale_order_id"/>
+        <field name="partner_id"/>
+        <field name="tracking_number"/>
+        <separator/>
+        <filter name="filter_draft" string="Koncept" domain="[('state', '=', 'draft')]"/>
+        <filter name="filter_sent" string="Odesláno" domain="[('state', '=', 'sent')]"/>
+        <filter name="filter_in_transit" string="Na cestě" domain="[('state', '=', 'in_transit')]"/>
+        <filter name="filter_delivered" string="Doručeno" domain="[('state', '=', 'delivered')]"/>
+        <filter name="filter_cancelled" string="Zrušeno" domain="[('state', '=', 'cancelled')]"/>
+        <filter name="filter_error" string="Chyba" domain="[('state', '=', 'error')]"/>
+        <separator/>
+        <group string="Seskupit podle">
+          <filter name="group_carrier" string="Dopravce" context="{'group_by': 'carrier_type'}"/>
+          <filter name="group_state" string="Stav" context="{'group_by': 'state'}"/>
+        </group>
+      </search>
+    </field>
+  </record>
+
+  <!-- ============ ACTION ============ -->
+  <record id="label_shipment_action" model="ir.actions.act_window">
+    <field name="name">Zásilky</field>
+    <field name="res_model">label.shipment</field>
+    <field name="view_mode">list,form</field>
+    <field name="search_view_id" ref="label_shipment_view_search"/>
+    <field name="help" type="html">
+      <p class="o_view_nocontent_smiling_face">
+        Vytvořte první zásilku
+      </p>
+      <p>Zásilky vytváříte z potvrzených objednávek.</p>
+    </field>
+  </record>
+
+</odoo>
