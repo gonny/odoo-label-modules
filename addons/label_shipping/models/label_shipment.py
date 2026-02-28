@@ -215,7 +215,7 @@ class LabelShipment(models.Model):
         partner = self.partner_shipping_id or self.partner_id
         company = self.env.company
         params = self._get_carrier_api_params()
-        weight_grams = int(self.weight * 1000)
+        weight_grams = round(self.weight * 1000)
         payload = {
             "customer": {"dsw": params.get("dsw", "")},
             "sender": {
