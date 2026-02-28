@@ -704,7 +704,7 @@ class TestLabelShipment(TransactionCase):
         """Test that selecting a sale order auto-fills carrier info."""
         so = self._create_sale_order()
         shipment = self.env["label.shipment"].new({
-            "carrier_type": "packeta",
+            "carrier_type": "dpd",
         })
         shipment.sale_order_id = so
         shipment._onchange_sale_order_id()
@@ -718,7 +718,7 @@ class TestLabelShipment(TransactionCase):
         """Test onchange fills carrier service code for HD."""
         so = self._create_sale_order(shipping_addr=self.delivery_hd)
         shipment = self.env["label.shipment"].new({
-            "carrier_type": "packeta",
+            "carrier_type": "dpd",
         })
         shipment.sale_order_id = so
         shipment._onchange_sale_order_id()
