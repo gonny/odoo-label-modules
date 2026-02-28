@@ -10,11 +10,11 @@
         <app data-string="Zásilky" string="Zásilky" name="label_shipping" groups="base.group_system">
 
           <block title="Packeta (Zásilkovna)" name="shipping_packeta_settings">
-            <setting id="shipping_packeta_key_setting" string="API Key" help="Klíč pro přístup k Packeta API">
-              <field name="shipping_packeta_api_key"/>
-            </setting>
             <setting id="shipping_packeta_password_setting" string="API Password" help="Heslo pro přístup k Packeta API">
               <field name="shipping_packeta_api_password" password="True"/>
+            </setting>
+            <setting id="shipping_packeta_indication_setting" string="Indication (eshop)" help="Název e-shopu odesílaný do Packeta API">
+              <field name="shipping_packeta_indication"/>
             </setting>
           </block>
 
@@ -27,15 +27,6 @@
             </setting>
             <setting id="shipping_dpd_test_mode_setting" string="Test Mode" help="Používat testovací DPD API endpoint místo produkčního">
               <field name="shipping_dpd_test_mode"/>
-            </setting>
-          </block>
-
-          <block title="Česká pošta (Balíkovna)" name="shipping_czech_post_settings">
-            <setting id="shipping_czech_post_key_setting" string="API Key" help="Klíč pro přístup k API České pošty">
-              <field name="shipping_czech_post_api_key"/>
-            </setting>
-            <setting id="shipping_czech_post_secret_setting" string="Secret Key" help="Tajný klíč pro API České pošty">
-              <field name="shipping_czech_post_secret_key" password="True"/>
             </setting>
           </block>
 

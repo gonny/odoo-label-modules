@@ -21,7 +21,7 @@
       <xpath expr="//field[@name='partner_shipping_id']/.." position="after">
         <group string="Doprava" name="label_shipping_info">
           <field name="label_shipping_carrier" invisible="1"/>
-          <field name="label_shipping_service" invisible="1"/>
+          <field name="label_shipping_service_code" invisible="1"/>
           <field name="label_shipping_pickup_point" invisible="1"/>
           <button name="action_create_shipment"
                   type="object"

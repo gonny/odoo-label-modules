@@ -1,3 +1,5 @@
+import base64
+
 from odoo import api, fields, models
 
 
@@ -35,16 +37,22 @@ class LabelShipment(models.Model):
         selection=[
             ("packeta", "Packeta"),
             ("dpd", "DPD"),
-            ("czech_post", "Česká pošta"),
         ],
         string="Dopravce",
         required=True,
     )
-    carrier_service = fields.Char(
-        string="Služba",
+    carrier_service_code = fields.Char(
+        string="Kód služby",
+        help="Kód služby dopravce (Packeta carrier ID, DPD service code).",
+    )
+    carrier_packet_id = fields.Char(
+        string="ID zásilky u dopravce",
+        readonly=True,
+        help="Interní ID zásilky u dopravce (pro stahování štítků a rušení).",
     )
     tracking_number = fields.Char(
         string="Sledovací číslo",
+        readonly=True,
     )
     tracking_url = fields.Char(
         string="Sledovací odkaz",
@@ -66,6 +74,8 @@ class LabelShipment(models.Model):
     )
     label_pdf = fields.Binary(
         string="Štítek PDF",
+        readonly=True,
+        help="PDF štítek vygenerovaný přes API dopravce.",
     )
     label_pdf_filename = fields.Char(
         string="Název souboru",
@@ -87,12 +97,7 @@ class LabelShipment(models.Model):
     _TRACKING_URL_MAP = {
         "packeta": "https://tracking.packeta.com/cs/?id={number}",
         "dpd": (
-            "https://tracking.dpd.de/parcelstatus"
-            "?query={number}&locale=cs_CZ"
-        ),
-        "czech_post": (
-            "https://www.postaonline.cz/trackandtrace/-/zasilka/cislo"
-            "?telecastka={number}"
+            "https://tracking.dpd.de/status/cs_CZ/parcel/{number}"
         ),
     }
 
@@ -123,19 +128,9 @@ class LabelShipment(models.Model):
         return super().create(vals_list)
 
     def action_send(self):
-        """Odeslat zásilku – nastaví stav na 'sent'."""
+        """Označit zásilku jako odesláno (ruční, bez API)."""
         for shipment in self:
             shipment.state = "sent"
-
-    def action_in_transit(self):
-        """Zásilka na cestě – nastaví stav na 'in_transit'."""
-        for shipment in self:
-            shipment.state = "in_transit"
-
-    def action_deliver(self):
-        """Zásilka doručena – nastaví stav na 'delivered'."""
-        for shipment in self:
-            shipment.state = "delivered"
 
     def action_cancel(self):
         """Zrušit zásilku – nastaví stav na 'cancelled'."""
@@ -146,6 +141,7 @@ class LabelShipment(models.Model):
         """Vrátit zásilku do konceptu."""
         for shipment in self:
             shipment.state = "draft"
+            shipment.error_message = False
 
     def _get_carrier_api_params(self):
         """Read carrier API keys from ir.config_parameter.
@@ -157,11 +153,12 @@ class LabelShipment(models.Model):
         ICP = self.env["ir.config_parameter"].sudo()
         if self.carrier_type == "packeta":
             return {
-                "api_key": ICP.get_param(
-                    "label_shipping.packeta_api_key", "",
-                ),
                 "api_password": ICP.get_param(
                     "label_shipping.packeta_api_password", "",
+                ),
+                "indication": ICP.get_param(
+                    "label_shipping.packeta_indication",
+                    "Vylaď to etiketou",
                 ),
             }
         elif self.carrier_type == "dpd":
@@ -174,45 +171,42 @@ class LabelShipment(models.Model):
                     "label_shipping.dpd_test_mode", "True",
                 ) in ("True", "1"),
             }
-        elif self.carrier_type == "czech_post":
-            return {
-                "api_key": ICP.get_param(
-                    "label_shipping.czech_post_api_key", "",
-                ),
-                "secret_key": ICP.get_param(
-                    "label_shipping.czech_post_secret_key", "",
-                ),
-            }
         return {}
 
     def _prepare_packeta_data(self):
-        """Prepare payload for Packeta API create packet call.
+        """Prepare payload dict for Packeta XML API createPacket call.
 
         Returns:
-            Dict with packet data for Packeta API.
+            Dict with packet attributes for XML builder.
         """
         self.ensure_one()
         partner = self.partner_shipping_id or self.partner_id
         name_parts = (partner.name or "").split(" ", 1)
-        return {
-            "number": self.name,
+        params = self._get_carrier_api_params()
+        data = {
+            "number": self.sale_order_id.name or self.name,
             "name": name_parts[0] if name_parts else "",
             "surname": name_parts[1] if len(name_parts) > 1 else "",
+            "company": partner.commercial_company_name or "",
             "email": partner.email or "",
             "phone": partner.phone or "",
-            "addressId": (
-                int(self.pickup_point_id)
-                if self.pickup_point_id
-                and self.pickup_point_id.strip().isdigit()
-                else 0
-            ),
             "value": self.sale_order_id.amount_total or 0,
+            "currency": "CZK",
             "weight": self.weight,
-            "eshop": self.env.company.name or "Odoo",
+            "eshop": params.get("indication", "Vylaď to etiketou"),
         }
+        # For home delivery add address fields
+        if not self.pickup_point_id:
+            data["carrier_service_code"] = self.carrier_service_code or ""
+            data["street"] = partner.street or ""
+            data["city"] = partner.city or ""
+            data["zip"] = (partner.zip or "").replace(" ", "")
+        return data
 
     def _prepare_dpd_data(self):
-        """Prepare payload for DPD GeoAPI create shipment call.
+        """Prepare payload for DPD GeoAPI v1 create shipment call.
+
+        Weight is converted from kg to grams as required by DPD API.
 
         Returns:
             Dict with shipment data for DPD API.
@@ -220,7 +214,10 @@ class LabelShipment(models.Model):
         self.ensure_one()
         partner = self.partner_shipping_id or self.partner_id
         company = self.env.company
-        return {
+        params = self._get_carrier_api_params()
+        weight_grams = int(self.weight * 1000)
+        payload = {
+            "customer": {"dsw": params.get("dsw", "")},
             "sender": {
                 "address": {
                     "street": company.street or "",
@@ -251,41 +248,21 @@ class LabelShipment(models.Model):
                 },
             },
             "parcels": [
-                {"weight": self.weight},
+                {"weight": weight_grams},
             ],
-            "services": ["classic"],
         }
-
-    def _prepare_czech_post_data(self):
-        """Prepare payload for Czech Post B2B API create shipment call.
-
-        Returns:
-            Dict with shipment data for Czech Post API.
-        """
-        self.ensure_one()
-        partner = self.partner_shipping_id or self.partner_id
-        return {
-            "recipientName": partner.name or "",
-            "recipientStreet": partner.street or "",
-            "recipientCity": partner.city or "",
-            "recipientZipCode": (partner.zip or "").replace(" ", ""),
-            "recipientCountryCode": (
-                partner.country_id.code
-                if partner.country_id
-                else "CZ"
-            ),
-            "recipientPhone": partner.phone or "",
-            "recipientEmail": partner.email or "",
-            "weight": self.weight,
-            "value": self.sale_order_id.amount_total or 0,
-            "pickupPointId": self.pickup_point_id or "",
-        }
+        # If pickup point is set, add it to parcel services
+        if self.pickup_point_id:
+            payload["parcels"][0]["services"] = {
+                "pickupPoint": self.pickup_point_id,
+            }
+        return payload
 
     def action_api_send(self):
         """Send shipment via carrier API.
 
         Creates the shipment through the appropriate carrier API,
-        stores the tracking number, and updates the state.
+        stores the tracking number and carrier packet ID, and updates the state.
         """
         for shipment in self:
             params = shipment._get_carrier_api_params()
@@ -306,14 +283,14 @@ class LabelShipment(models.Model):
                 from ..services import packeta_api
                 data = shipment._prepare_packeta_data()
                 success, result = packeta_api.create_packet(
-                    params["api_key"], params["api_password"], data,
+                    params["api_password"],
+                    data,
+                    pickup_point_id=shipment.pickup_point_id or None,
                 )
                 if success and isinstance(result, dict):
-                    tracking = str(
-                        result.get("id", result.get("barcode", ""))
-                    )
                     shipment.write({
-                        "tracking_number": tracking,
+                        "carrier_packet_id": result.get("id", ""),
+                        "tracking_number": result.get("barcode", ""),
                         "state": "sent",
                         "error_message": False,
                     })
@@ -325,34 +302,23 @@ class LabelShipment(models.Model):
                     params["api_key"], params["dsw"], data,
                     test_mode=params.get("test_mode", True),
                 )
-                if success and isinstance(result, (dict, list)):
-                    # DPD returns list of shipment results
-                    res = result[0] if isinstance(result, list) else result
-                    parcels = res.get("parcels", [])
-                    tracking = (
-                        parcels[0].get("parcelNumber", "")
-                        if parcels
-                        else ""
-                    )
-                    shipment.write({
-                        "tracking_number": tracking,
-                        "state": "sent",
-                        "error_message": False,
-                    })
-
-            elif shipment.carrier_type == "czech_post":
-                from ..services import czech_post_api
-                data = shipment._prepare_czech_post_data()
-                success, result = czech_post_api.create_shipment(
-                    params["api_key"], params["secret_key"], data,
-                )
                 if success and isinstance(result, dict):
-                    tracking = str(
-                        result.get(
-                            "trackingNumber", result.get("id", ""),
+                    # DPD response contains shipment and parcel identifiers
+                    shipment_id = str(result.get("shipmentId", ""))
+                    parcels = result.get("parcels", [])
+                    parcel_ident = ""
+                    tracking = ""
+                    if parcels:
+                        parcel_ident = str(
+                            parcels[0].get("parcelIdent", "")
                         )
-                    )
+                        tracking = str(
+                            parcels[0].get("parcelNumber", "")
+                        )
                     shipment.write({
+                        "carrier_packet_id": (
+                            parcel_ident or shipment_id
+                        ),
                         "tracking_number": tracking,
                         "state": "sent",
                         "error_message": False,
@@ -370,10 +336,12 @@ class LabelShipment(models.Model):
     def action_download_label(self):
         """Download shipping label PDF from carrier API."""
         for shipment in self:
-            if not shipment.tracking_number:
+            if not shipment.carrier_packet_id:
                 shipment.write({
-                    "state": "error",
-                    "error_message": "Zásilka nemá sledovací číslo.",
+                    "error_message": (
+                        "Zásilka nemá ID u dopravce."
+                        " Nejprve odešlete přes API."
+                    ),
                 })
                 continue
 
@@ -384,24 +352,18 @@ class LabelShipment(models.Model):
             if shipment.carrier_type == "packeta":
                 from ..services import packeta_api
                 success, result = packeta_api.get_packet_label(
-                    params["api_key"], params["api_password"],
-                    shipment.tracking_number,
+                    params["api_password"],
+                    shipment.carrier_packet_id,
                 )
             elif shipment.carrier_type == "dpd":
                 from ..services import dpd_api
                 success, result = dpd_api.get_labels(
-                    params["api_key"], [shipment.tracking_number],
+                    params["api_key"],
+                    shipment.carrier_packet_id,
                     test_mode=params.get("test_mode", True),
-                )
-            elif shipment.carrier_type == "czech_post":
-                from ..services import czech_post_api
-                success, result = czech_post_api.get_shipment_label(
-                    params["api_key"], params["secret_key"],
-                    shipment.tracking_number,
                 )
 
             if success and isinstance(result, bytes):
-                import base64
                 shipment.write({
                     "label_pdf": base64.b64encode(result),
                     "label_pdf_filename": f"label_{shipment.name}.pdf",
@@ -417,57 +379,10 @@ class LabelShipment(models.Model):
                     ),
                 })
 
-    def action_api_track(self):
-        """Get tracking status from carrier API."""
-        for shipment in self:
-            if not shipment.tracking_number:
-                continue
-
-            params = shipment._get_carrier_api_params()
-            success = False
-            result = ""
-
-            if shipment.carrier_type == "packeta":
-                from ..services import packeta_api
-                success, result = packeta_api.get_packet_tracking(
-                    params["api_key"], params["api_password"],
-                    shipment.tracking_number,
-                )
-            elif shipment.carrier_type == "dpd":
-                from ..services import dpd_api
-                success, result = dpd_api.get_tracking(
-                    params["api_key"], shipment.tracking_number,
-                    test_mode=params.get("test_mode", True),
-                )
-            elif shipment.carrier_type == "czech_post":
-                from ..services import czech_post_api
-                success, result = czech_post_api.get_shipment_tracking(
-                    params["api_key"], params["secret_key"],
-                    shipment.tracking_number,
-                )
-
-            if success and isinstance(result, dict):
-                # Try to determine delivery status from tracking data
-                status = str(
-                    result.get("statusCode", result.get("status", ""))
-                ).lower()
-                if status in ("delivered", "doručeno", "5"):
-                    shipment.state = "delivered"
-                elif status in ("in_transit", "na_ceste", "2", "3", "4"):
-                    shipment.state = "in_transit"
-                shipment.error_message = False
-            elif not success:
-                error_msg = (
-                    result if isinstance(result, str) else str(result)
-                )
-                shipment.error_message = (
-                    f"Chyba sledování: {error_msg}"
-                )
-
     def action_api_cancel(self):
         """Cancel shipment via carrier API."""
         for shipment in self:
-            if not shipment.tracking_number:
+            if not shipment.carrier_packet_id:
                 shipment.state = "cancelled"
                 continue
 
@@ -478,20 +393,15 @@ class LabelShipment(models.Model):
             if shipment.carrier_type == "packeta":
                 from ..services import packeta_api
                 success, result = packeta_api.cancel_packet(
-                    params["api_key"], params["api_password"],
-                    shipment.tracking_number,
+                    params["api_password"],
+                    shipment.carrier_packet_id,
                 )
             elif shipment.carrier_type == "dpd":
                 from ..services import dpd_api
                 success, result = dpd_api.cancel_shipment(
-                    params["api_key"], shipment.tracking_number,
+                    params["api_key"],
+                    shipment.carrier_packet_id,
                     test_mode=params.get("test_mode", True),
-                )
-            elif shipment.carrier_type == "czech_post":
-                from ..services import czech_post_api
-                success, result = czech_post_api.cancel_shipment(
-                    params["api_key"], params["secret_key"],
-                    shipment.tracking_number,
                 )
 
             if success:

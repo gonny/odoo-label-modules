@@ -9,16 +9,10 @@ class SaleOrder(models.Model):
         related="partner_shipping_id.label_preferred_carrier",
         string="Dopravce",
         readonly=True,
-        selection=[
-            ("none", "Žádný"),
-            ("packeta", "Packeta"),
-            ("dpd", "DPD"),
-            ("czech_post", "Česká pošta"),
-        ],
     )
-    label_shipping_service = fields.Char(
-        string="Služba dopravce",
-        related="partner_shipping_id.label_carrier_service",
+    label_shipping_service_code = fields.Char(
+        string="Kód služby dopravce",
+        related="partner_shipping_id.label_carrier_service_code",
         readonly=True,
     )
     label_shipping_pickup_point = fields.Char(
@@ -59,8 +53,9 @@ class SaleOrder(models.Model):
             "context": {
                 "default_sale_order_id": self.id,
                 "default_carrier_type": carrier,
-                "default_carrier_service": (
-                    self.partner_shipping_id.label_carrier_service or ""
+                "default_carrier_service_code": (
+                    self.partner_shipping_id.label_carrier_service_code
+                    or ""
                 ),
                 "default_pickup_point_id": (
                     self.partner_shipping_id.label_pickup_point_id or ""
@@ -68,6 +63,7 @@ class SaleOrder(models.Model):
                 "default_pickup_point_name": (
                     self.partner_shipping_id.label_pickup_point_name or ""
                 ),
+                "default_weight": 0.5,
             },
         }
 

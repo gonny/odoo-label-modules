@@ -1,10 +1,11 @@
 import logging
+
 import requests
 
 _logger = logging.getLogger(__name__)
 
-PROD_URL = "https://geoapi.dpd.cz"
-TEST_URL = "https://geoapi-test.dpd.cz"
+PROD_URL = "https://geoapi.dpd.cz/v1"
+TEST_URL = "https://geoapi-test.dpd.cz/v1"
 
 
 def _base_url(test_mode=False):
@@ -21,7 +22,7 @@ def _headers(api_key):
 
 
 def create_shipment(api_key, dsw, data, test_mode=False):
-    """Create a shipment via DPD GeoAPI v2.
+    """Create a shipment via DPD GeoAPI v1.
 
     Args:
         api_key: DPD API key.
@@ -33,12 +34,12 @@ def create_shipment(api_key, dsw, data, test_mode=False):
         Tuple of (success: bool, result dict or error message str).
     """
     try:
-        url = f"{_base_url(test_mode)}/v2/shipments"
+        url = f"{_base_url(test_mode)}/shipments"
         payload = dict(data)
         if "customer" not in payload:
-            payload["customer"] = {"ident": dsw}
+            payload["customer"] = {"dsw": dsw}
         response = requests.post(
-            url, json=[payload], headers=_headers(api_key), timeout=30,
+            url, json=payload, headers=_headers(api_key), timeout=30,
         )
         if response.status_code in (200, 201):
             result = response.json()
@@ -49,20 +50,20 @@ def create_shipment(api_key, dsw, data, test_mode=False):
         return False, str(e)
 
 
-def get_labels(api_key, parcel_numbers, test_mode=False):
-    """Download PDF labels for parcels.
+def get_labels(api_key, parcel_ident, test_mode=False):
+    """Download PDF label for a parcel via DPD GeoAPI v1.
 
     Args:
         api_key: DPD API key.
-        parcel_numbers: List of parcel number strings.
+        parcel_ident: Parcel identifier string.
         test_mode: Use test API endpoint if True.
 
     Returns:
         Tuple of (success: bool, pdf_bytes or error message str).
     """
     try:
-        url = f"{_base_url(test_mode)}/v2/labels"
-        payload = {"parcels": parcel_numbers, "printType": "pdf"}
+        url = f"{_base_url(test_mode)}/parcels/{parcel_ident}/labels"
+        payload = {"printType": "pdf", "printFormat": "A6"}
         response = requests.post(
             url, json=payload, headers=_headers(api_key), timeout=30,
         )
@@ -74,41 +75,19 @@ def get_labels(api_key, parcel_numbers, test_mode=False):
         return False, str(e)
 
 
-def get_tracking(api_key, parcel_number, test_mode=False):
-    """Get tracking status for a parcel.
+def cancel_shipment(api_key, shipment_id, test_mode=False):
+    """Cancel a shipment via DPD GeoAPI v1.
 
     Args:
         api_key: DPD API key.
-        parcel_number: DPD parcel number string.
-        test_mode: Use test API endpoint if True.
-
-    Returns:
-        Tuple of (success: bool, tracking_data dict or error message str).
-    """
-    try:
-        url = f"{_base_url(test_mode)}/v2/tracking/{parcel_number}"
-        response = requests.get(url, headers=_headers(api_key), timeout=30)
-        if response.status_code == 200:
-            return True, response.json()
-        return False, f"HTTP {response.status_code}: {response.text[:500]}"
-    except requests.RequestException as e:
-        _logger.error("DPD tracking error: %s", e)
-        return False, str(e)
-
-
-def cancel_shipment(api_key, parcel_number, test_mode=False):
-    """Cancel a shipment.
-
-    Args:
-        api_key: DPD API key.
-        parcel_number: DPD parcel number string.
+        shipment_id: DPD shipment ID string.
         test_mode: Use test API endpoint if True.
 
     Returns:
         Tuple of (success: bool, result dict or error message str).
     """
     try:
-        url = f"{_base_url(test_mode)}/v2/shipments/{parcel_number}"
+        url = f"{_base_url(test_mode)}/shipments/{shipment_id}"
         response = requests.delete(url, headers=_headers(api_key), timeout=30)
         if response.status_code in (200, 204):
             return True, {"status": "cancelled"}

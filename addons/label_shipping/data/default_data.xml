@@ -12,13 +12,13 @@
     </record>
 
     <!-- ============ API KLÍČE (výchozí prázdné) ============ -->
-    <record id="config_packeta_api_key" model="ir.config_parameter">
-      <field name="key">label_shipping.packeta_api_key</field>
-      <field name="value"></field>
-    </record>
     <record id="config_packeta_api_password" model="ir.config_parameter">
       <field name="key">label_shipping.packeta_api_password</field>
       <field name="value"></field>
+    </record>
+    <record id="config_packeta_indication" model="ir.config_parameter">
+      <field name="key">label_shipping.packeta_indication</field>
+      <field name="value">Vylaď to etiketou</field>
     </record>
     <record id="config_dpd_api_key" model="ir.config_parameter">
       <field name="key">label_shipping.dpd_api_key</field>
@@ -26,14 +26,6 @@
     </record>
     <record id="config_dpd_api_dsw" model="ir.config_parameter">
       <field name="key">label_shipping.dpd_api_dsw</field>
-      <field name="value"></field>
-    </record>
-    <record id="config_czech_post_api_key" model="ir.config_parameter">
-      <field name="key">label_shipping.czech_post_api_key</field>
-      <field name="value"></field>
-    </record>
-    <record id="config_czech_post_secret_key" model="ir.config_parameter">
-      <field name="key">label_shipping.czech_post_secret_key</field>
       <field name="value"></field>
     </record>
     <record id="config_dpd_test_mode" model="ir.config_parameter">

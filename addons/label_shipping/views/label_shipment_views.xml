@@ -9,8 +9,9 @@
       <list>
         <field name="name"/>
         <field name="sale_order_id"/>
-        <field name="partner_id"/>
+        <field name="partner_id" string="Zákazník"/>
         <field name="carrier_type"/>
+        <field name="carrier_service_code"/>
         <field name="tracking_number"/>
         <field name="state" widget="badge"
                decoration-info="state == 'draft'"
@@ -39,14 +40,8 @@
           <button name="action_download_label" type="object"
                   string="Stáhnout štítek"
                   invisible="state not in ('sent', 'in_transit')"/>
-          <button name="action_api_track" type="object"
-                  string="Aktualizovat stav"
-                  invisible="state not in ('sent', 'in_transit')"/>
           <button name="action_api_cancel" type="object"
-                  string="Zrušit (API)"
-                  invisible="state not in ('draft', 'sent', 'in_transit')"/>
-          <button name="action_cancel" type="object"
-                  string="Zrušit (ruční)"
+                  string="Zrušit zásilku"
                   invisible="state not in ('draft', 'sent', 'in_transit')"/>
           <button name="action_reset_to_draft" type="object"
                   string="Zpět na koncept"
@@ -68,8 +63,9 @@
             </group>
             <group string="Dopravce">
               <field name="carrier_type"/>
-              <field name="carrier_service"/>
+              <field name="carrier_service_code"/>
               <field name="weight"/>
+              <field name="carrier_packet_id" groups="base.group_no_one"/>
             </group>
           </group>
           <group>
@@ -78,16 +74,16 @@
               <field name="pickup_point_name"/>
             </group>
             <group string="Sledování">
-              <field name="tracking_number"/>
+              <field name="tracking_number" readonly="1"/>
               <field name="tracking_url" widget="url"/>
             </group>
           </group>
           <group>
             <group string="Štítek">
-              <field name="label_pdf" filename="label_pdf_filename"/>
+              <field name="label_pdf" filename="label_pdf_filename" readonly="1"/>
               <field name="label_pdf_filename" invisible="1"/>
             </group>
-            <group string="Chyba" invisible="state != 'error'">
+            <group string="Chyba" invisible="not error_message">
               <field name="error_message"/>
             </group>
           </group>

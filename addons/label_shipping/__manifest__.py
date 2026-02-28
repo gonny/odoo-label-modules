@@ -2,12 +2,11 @@
     "name": "Label Shipping",
     "version": "19.0.1.0.0",
     "category": "Inventory/Delivery",
-    "summary": "Správa zásilek – Packeta, DPD, Česká pošta",
+    "summary": "Správa zásilek – Packeta, DPD",
     "description": """
         Modul pro tvorbu zásilek a tisk štítků přes API:
         - Packeta (Zásilkovna)
         - DPD CZ
-        - Česká pošta (Balíkovna)
     """,
     "author": "Jan Šnobl",
     "website": "https://etiketou.cz",
