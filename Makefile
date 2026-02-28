@@ -1,7 +1,7 @@
 # ============================================================================
 # Odoo Label Calculator – Development Makefile
 # ============================================================================
-# Requires: Docker, Docker Compose (v2 plugin)
+# Requires: Docker, Docker Compose (v2 plugin), Doppler CLI (optional, for secrets management)
 #
 # Quick start:
 #   make up        – start Odoo 19 + PostgreSQL 16
@@ -11,6 +11,14 @@
 #   make shell     – open interactive Odoo Python shell
 #   make logs      – tail Odoo logs
 # ============================================================================
+
+DOPPLER := $(shell command -v doppler 2> /dev/null)
+
+ifdef DOPPLER
+  RUN = doppler run --
+else
+  RUN =
+endif
 
 .PHONY: help up down restart reset test seed shell logs logs-db db-shell \
         smoke build install format lint clean quality test-coverage \
@@ -30,7 +38,7 @@ help:  ## Show this help message
 
 up:  ## Start Odoo + PostgreSQL containers
 	@echo "Starting Odoo …"
-	docker compose up -d
+	$(RUN) docker compose up -d
 	@echo "✓ Odoo starting at http://localhost:$(ODOO_PORT)"
 
 down:  ## Stop and remove containers (keeps data volumes)
@@ -44,31 +52,31 @@ restart:  ## Restart Odoo and PostgreSQL containers
 
 reset:  ## Drop DB, recreate, install module with seed data
 	@echo "Resetting database …"
-	docker compose down -v
-	docker compose up -d db
+	$(RUN) docker compose down -v
+	$(RUN) docker compose up -d db
 	@echo "Waiting for PostgreSQL …"
 	@sleep 5
-	docker compose up -d
+	$(RUN) docker compose up -d
 	@echo "Waiting for Odoo to start …"
 	@sleep 10
-	docker compose run --rm -e PGPASSWORD=odoo odoo \
+	$(RUN) docker compose run --rm -e PGPASSWORD=odoo odoo \
 		odoo -d $(ODOO_DB) -i $(ODOO_MODULE) --stop-after-init \
 		--without-demo=all --log-level=warn
-	docker compose restart odoo
+	$(RUN) docker compose restart odoo
 	@echo "✓ Database reset complete – Odoo ready at http://localhost:$(ODOO_PORT)"
 
 test:  ## Run Odoo unit tests for label_calculator
-	docker compose run --rm odoo \
+	$(RUN) docker compose run --rm odoo \
 		odoo -d $(ODOO_DB) -u $(ODOO_MODULE) \
 		--test-tags /$(ODOO_MODULE) \
 		--stop-after-init \
 		--log-level=test
 
 seed:  ## Update/install module without dropping DB (re-seed data)
-	docker compose run --rm odoo \
+	$(RUN) docker compose run --rm odoo \
 		odoo -d $(ODOO_DB) -u $(ODOO_MODULE) \
 		--stop-after-init --log-level=warn
-	docker compose restart odoo
+	$(RUN) docker compose restart odoo
 	@echo "✓ Module updated"
 
 shell:  ## Open interactive Odoo Python shell
@@ -84,7 +92,7 @@ db-shell:  ## Open a PostgreSQL shell
 	docker compose exec db psql -U odoo -d $(ODOO_DB)
 
 smoke:  ## Run end-to-end smoke test via XML-RPC
-	python scripts/smoke_test.py
+	$(RUN) python scripts/smoke_test.py
 
 # ── Build & module management ─────────────────────────────────────────────
 

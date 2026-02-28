@@ -11,18 +11,21 @@ services:
     ports:
       - "${ODOO_PORT:-8069}:8069"
     volumes:
-      # Tvoje vlastní moduly – LIVE mount z disku
       - ./addons:/mnt/extra-addons
-      # Konfigurace Odoo
       - ./config/odoo.conf:/etc/odoo/odoo.conf:ro
-      # Persistentní data (filestore, sessions)
       - odoo-data:/var/lib/odoo
     environment:
       - HOST=db
       - PORT=5432
       - USER=${POSTGRES_USER:-odoo}
       - PASSWORD=${POSTGRES_PASSWORD:-odoo}
-    # Dev mode: auto-reload Python + XML hot reload
+      # Carrier API keys (from Doppler)
+      - PACKETA_API_KEY=${PACKETA_API_KEY:-}
+      - PACKETA_API_PASSWORD=${PACKETA_API_PASSWORD:-}
+      - DPD_API_KEY=${DPD_API_KEY:-}
+      - DPD_API_DSW=${DPD_API_DSW:-}
+      - CZECH_POST_API_KEY=${CZECH_POST_API_KEY:-}
+      - CZECH_POST_SECRET_KEY=${CZECH_POST_SECRET_KEY:-}
     command: ["--dev=reload,xml"]
     restart: unless-stopped
 
@@ -37,7 +40,6 @@ services:
     volumes:
       - db-data:/var/lib/postgresql/data/pgdata
     ports:
-      # Pro přímý přístup k DB (debug, pgAdmin)
       - "${POSTGRES_PORT:-5433}:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-odoo}"]

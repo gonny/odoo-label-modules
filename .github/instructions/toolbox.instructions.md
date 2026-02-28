@@ -14,6 +14,7 @@ and textile tags. Self-hosted via Docker.
 - PostgreSQL 16
 - Docker + Docker Compose
 - SvelteKit (Phase 2 – public calculator)
+- Doppler CLI (optional, for secrets management)
 
 ## Key Odoo 19 Differences (vs older versions)
 - Use `<list>` NOT `<tree>` in XML views
@@ -38,46 +39,26 @@ Document covering additional details is in [CONTRIBUTING.md](./../../CONTRIBUTIN
 # User: admin (or configured email)
 # Password: admin (or configured password)
 
-## Module Structure
+## Existing custom modules
+- label_calculator -> addons/label_calculator/
 
-addons/label_calculator/
-├── __manifest__.py
-├── __init__.py
-├── models/
-│   ├── __init__.py
-│   ├── label_machine.py
-│   ├── label_material_group.py
-│   ├── label_material.py
-│   ├── label_production_tier.py
-│   ├── label_material_tier_override.py
-│   ├── label_calculator.py          # Core calculation engine
-│   ├── product_template.py
-│   ├── sale_order.py
-│   ├── sale_order_line.py
-│   ├── account_move.py
-│   ├── account_move_line.py
-│   ├── partner_discount_tier.py
-│   ├── res_partner.py
-│   └── res_config_settings.py
-├── views/
-│   ├── label_machine_views.xml
-│   ├── label_material_group_views.xml
-│   ├── label_material_views.xml
-│   ├── label_production_tier_views.xml
-│   ├── product_template_views.xml
-│   ├── sale_order_line_views.xml
-│   ├── account_move_views.xml
-│   ├── partner_discount_tier_views.xml
-│   ├── res_partner_views.xml
-│   ├── res_config_settings_views.xml
-│   └── menu.xml
-├── security/
-│   └── ir.model.access.csv
-├── data/
-│   └── default_data.xml
-└── tests/
-    ├── __init__.py
-    └── test_calculator.py           # 23 tests
+## Environment Variables
+
+This project uses Doppler for secrets management. All API keys and 
+credentials are available as environment variables when running commands 
+with `doppler run --` prefix.
+
+If Doppler is not available (e.g., in CI without token), the Makefile 
+falls back to standard environment variables.
+
+### Available env vars:
+- `PACKETA_API_KEY` – Packeta REST API key
+- `PACKETA_API_PASSWORD` – Packeta API password
+- `DPD_API_KEY` – DPD GeoAPI key
+- `DPD_API_DSW` – DPD DSW token
+- `CZECH_POST_API_KEY` – Czech Post B2B API key
+- `CZECH_POST_SECRET_KEY` – Czech Post HMAC secret
+
 
 ## Calculation Logic Overview
 - Materials have types: area (mm²), length (mm), time (seconds), pieces
@@ -87,6 +68,8 @@ addons/label_calculator/
 - Rounding: math.ceil(price * 10) / 10 (always up to 10 haléřů)
 - Addon materials (is_addon=True): only material cost, no labor
 - Time addons: seconds × machine hourly_amortization / 3600
+
+
 
 ## Makefile Commands
 - available in [Makefile](./../../Makefile) for common tasks:
