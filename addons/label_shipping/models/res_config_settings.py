@@ -11,7 +11,7 @@ class ResConfigSettings(models.TransientModel):
     shipping_packeta_indication = fields.Char(
         string="Packeta Indication (eshop)",
         config_parameter="label_shipping.packeta_indication",
-        default="Vylaď to etiketou",
+        default="Etiketou",
     )
     shipping_dpd_api_key = fields.Char(
         string="DPD API Key",

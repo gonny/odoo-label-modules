@@ -176,7 +176,7 @@ class LabelShipment(models.Model):
                 ),
                 "indication": ICP.get_param(
                     "label_shipping.packeta_indication",
-                    "Vylaď to etiketou",
+                    "Etiketou",
                 ),
             }
         elif self.carrier_type == "dpd":
@@ -211,7 +211,7 @@ class LabelShipment(models.Model):
             "value": self.sale_order_id.amount_total or 0,
             "currency": "CZK",
             "weight": self.weight,
-            "eshop": params.get("indication", "Vylaď to etiketou"),
+            "eshop": params.get("indication", "Etiketou"),
         }
         # For home delivery add address fields
         if not self.pickup_point_id:
