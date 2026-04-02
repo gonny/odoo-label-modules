@@ -188,13 +188,19 @@ class SaleOrderLine(models.Model):
     # === Přidání auto discountu z partnerovy hladiny do kalkulace ===
     @api.onchange("product_template_id", "label_material_id")
     def _onchange_apply_partner_discount(self):
-        """Automaticky vyplní slevu z hladiny zákazníka."""
-        if (
-            self.pricing_type == "calculator"
-            and self.order_id.partner_id
-            and self.order_id.partner_id.label_effective_discount > 0
-        ):
-            self.discount = self.order_id.partner_id.label_effective_discount
+        """Automaticky vyplní slevu z hladiny zákazníka.
+
+        VIP zákazníci nemají slevu – discount = 0.
+        """
+        if self.pricing_type != "calculator":
+            return
+        partner = self.order_id.partner_id
+        if not partner:
+            return
+        if partner.label_is_vip:
+            self.discount = 0
+        elif partner.label_effective_discount > 0:
+            self.discount = partner.label_effective_discount
 
 
     # === Onchange: výběr produktu ===
@@ -331,10 +337,13 @@ class SaleOrderLine(models.Model):
             else [(5, 0, 0)]
         )
 
-        # Zjisti slevu zákazníka
+        # Zjisti slevu zákazníka (VIP = 0)
         discount = 0
-        if order.partner_id and order.partner_id.label_effective_discount > 0:
-            discount = order.partner_id.label_effective_discount
+        if order.partner_id:
+            if order.partner_id.label_is_vip:
+                discount = 0
+            elif order.partner_id.label_effective_discount > 0:
+                discount = order.partner_id.label_effective_discount
 
         vals = {
             "order_id": order.id,
@@ -393,11 +402,19 @@ class SaleOrderLine(models.Model):
         )
 
     def _run_calculation(self):
+        """Spustí kalkulaci s přihlédnutím k cenovému profilu zákazníka."""
         addon_ids = []
         if self.label_ttr_material_id:
             addon_ids.append(self.label_ttr_material_id.id)
         if self.label_addon_ids:
             addon_ids.extend(self.label_addon_ids.ids)
+
+        # Resolve pricing profile from partner
+        profile_id = None
+        if self.order_id.partner_id:
+            partner = self.order_id.partner_id
+            if partner.label_pricing_profile_id:
+                profile_id = partner.label_pricing_profile_id.id
 
         calc = self.env["label.calculator"]
         return calc.compute_price(
@@ -407,6 +424,7 @@ class SaleOrderLine(models.Model):
             quantity=int(self.product_uom_qty or 1),
             is_repeat_design=self.label_is_repeat_design,
             addon_material_ids=addon_ids or None,
+            pricing_profile_id=profile_id,
         )
 
     def _format_breakdown(self, result):
@@ -460,6 +478,9 @@ class SaleOrderLine(models.Model):
 
         lines.append("")
         lines.append("═══ SOUHRN ═══")
+        profile_name = result.get("pricing_profile_name", "")
+        if profile_name and profile_name != "Standard":
+            lines.append(f"  Profil:  ⭐ {profile_name}")
         lines.append(f"  Tier:    {result.get('tier_name', '?')}")
         lines.append(f"  Marže:   {result.get('margin_pct', 0):.0f}%")
         lines.append(

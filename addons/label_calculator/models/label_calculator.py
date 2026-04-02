@@ -37,6 +37,7 @@ class LabelCalculator(models.AbstractModel):
         quantity=1,
         is_repeat_design=False,
         addon_material_ids=None,
+        pricing_profile_id=None,
     ):
         """Vypočítá kompletní cenu za 1 ks a celkem.
 
@@ -47,6 +48,7 @@ class LabelCalculator(models.AbstractModel):
             quantity: int – počet kusů
             is_repeat_design: bool – opakovaný design (test odpad = 0)
             addon_material_ids: list[int] – ID příplatkových materiálů
+            pricing_profile_id: int – ID cenového profilu (None = výchozí)
 
         Returns:
             dict s klíči: unit_price, total_price, breakdown, warnings
@@ -86,8 +88,11 @@ class LabelCalculator(models.AbstractModel):
         # Načti globální nastavení
         config = self._get_config()
 
+        # Resolve pricing profile
+        profile = self._resolve_profile(pricing_profile_id)
+
         # Najdi tier
-        tier = self._find_tier(group, quantity)
+        tier = self._find_tier(group, quantity, profile)
         if not tier:
             return self._error_result(
                 f"Nenalezena množstevní hladina pro {quantity} ks "
@@ -168,6 +173,7 @@ class LabelCalculator(models.AbstractModel):
             "quantity": quantity,
             "tier_name": tier.name,
             "margin_pct": margin_pct,
+            "pricing_profile_name": profile.name if profile else "Standard",
             "breakdown": {
                 "main": main_result,
                 "addons": addon_results,
@@ -398,17 +404,58 @@ class LabelCalculator(models.AbstractModel):
         import math
         return math.ceil(price * 10) / 10
 
-    def _find_tier(self, group, quantity):
-        """Najde správnou hladinu pro dané množství a skupinu."""
-        return self.env["label.production.tier"].search(
-            [
-                ("group_id", "=", group.id),
-                ("min_quantity", "<=", quantity),
-                ("max_quantity", ">=", quantity),
-                ("active", "=", True),
-            ],
-            limit=1,
+    def _find_tier(self, group, quantity, profile=None):
+        """Najde správnou hladinu pro dané množství, skupinu a profil.
+
+        Pokud profil je zadán, hledá tier s daným profilem.
+        Pokud tier pro profil neexistuje, spadne zpět na výchozí profil.
+        Pokud profil není zadán, hledá tier bez ohledu na profil.
+        """
+        domain = [
+            ("group_id", "=", group.id),
+            ("min_quantity", "<=", quantity),
+            ("max_quantity", ">=", quantity),
+            ("active", "=", True),
+        ]
+
+        if profile:
+            # Hledej tier s tímto profilem
+            profile_domain = domain + [("pricing_profile_id", "=", profile.id)]
+            tier = self.env["label.production.tier"].search(
+                profile_domain, limit=1,
+            )
+            if tier:
+                return tier
+
+            # Fallback: hledej s výchozím profilem
+            if not profile.is_default:
+                default_profile = self.env["label.pricing.profile"].search(
+                    [("is_default", "=", True)], limit=1,
+                )
+                if default_profile:
+                    fallback_domain = domain + [
+                        ("pricing_profile_id", "=", default_profile.id),
+                    ]
+                    tier = self.env["label.production.tier"].search(
+                        fallback_domain, limit=1,
+                    )
+                    if tier:
+                        return tier
+
+        # Fallback: hledej tier bez ohledu na profil
+        return self.env["label.production.tier"].search(domain, limit=1)
+
+    def _resolve_profile(self, pricing_profile_id):
+        """Resolves pricing profile from ID or returns default."""
+        if pricing_profile_id:
+            profile = self.env["label.pricing.profile"].browse(pricing_profile_id)
+            if profile.exists():
+                return profile
+        # Return default profile
+        default = self.env["label.pricing.profile"].search(
+            [("is_default", "=", True)], limit=1,
         )
+        return default or False
 
     def _get_effective_pcs_per_hour(self, material, tier):
         """Vrátí pieces_per_hour – s override pokud existuje."""

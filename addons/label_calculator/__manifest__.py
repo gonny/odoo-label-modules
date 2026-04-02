@@ -24,6 +24,7 @@
         "security/ir.model.access.csv",
         "data/default_data.xml",
         "views/label_machine_views.xml",
+        "views/label_pricing_profile_views.xml",
         "views/label_material_group_views.xml",
         "views/label_material_views.xml",
         "views/label_production_tier_views.xml",

@@ -17,6 +17,12 @@ class AccountMove(models.Model):
         store=True,
     )
 
+    label_pricing_profile_display = fields.Char(
+        string="Cenový profil",
+        compute="_compute_pricing_profile_display",
+        help="Cenový profil zákazníka (VIP badge).",
+    )
+
     @api.depends("name")
     def _compute_variable_symbol(self):
         """Variabilní symbol = číslo faktury bez písmen."""
@@ -26,6 +32,18 @@ class AccountMove(models.Model):
                 move.label_variable_symbol = digits[-10:]
             else:
                 move.label_variable_symbol = ""
+
+    @api.depends("partner_id")
+    def _compute_pricing_profile_display(self):
+        """Zobrazí cenový profil zákazníka jako badge text."""
+        for move in self:
+            partner = move.partner_id
+            if partner and partner.label_is_vip and partner.label_pricing_profile_id:
+                move.label_pricing_profile_display = (
+                    f"⭐ {partner.label_pricing_profile_id.name}"
+                )
+            else:
+                move.label_pricing_profile_display = ""
 
     @api.model_create_multi
     def create(self, vals_list):

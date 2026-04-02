@@ -11,6 +11,12 @@ class SaleOrder(models.Model):
         string="Historie štítků zákazníka",
     )
 
+    label_pricing_profile_display = fields.Char(
+        string="Cenový profil",
+        compute="_compute_pricing_profile_display",
+        help="Cenový profil zákazníka (VIP badge).",
+    )
+
     @api.depends("partner_id")
     def _compute_partner_history(self):
         for order in self:
@@ -32,6 +38,18 @@ class SaleOrder(models.Model):
                 limit=100,
             )
             order.label_partner_history_ids = lines
+
+    @api.depends("partner_id")
+    def _compute_pricing_profile_display(self):
+        """Zobrazí cenový profil zákazníka jako badge text."""
+        for order in self:
+            partner = order.partner_id
+            if partner and partner.label_is_vip and partner.label_pricing_profile_id:
+                order.label_pricing_profile_display = (
+                    f"⭐ {partner.label_pricing_profile_id.name}"
+                )
+            else:
+                order.label_pricing_profile_display = ""
 
     def action_open_partner_history(self):
         """Otevře historii zákazníka v standalone okně s groupby."""

@@ -13,6 +13,15 @@
             inherit_id="account.report_invoice_document"
             priority="99">
 
+    <!-- VIP badge on invoice near customer name -->
+    <xpath expr="//div[@id='informations']" position="inside">
+      <div t-if="o.label_pricing_profile_display" class="col-auto col-3 mw-100 mb-2">
+        <span class="badge text-bg-success" style="font-size: 0.85em;">
+          <t t-esc="o.label_pricing_profile_display"/>
+        </span>
+      </div>
+    </xpath>
+
     <!-- Variable symbol – shown after payment reference in informations block -->
     <xpath expr="//div[@id='informations']" position="inside">
       <div t-if="o.label_variable_symbol" class="col-auto col-3 mw-100 mb-2">

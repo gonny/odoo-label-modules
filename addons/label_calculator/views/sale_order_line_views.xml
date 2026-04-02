@@ -48,6 +48,11 @@
         <field name="label_material_cost_only" string="Náklad mat." optional="show"/>
       </xpath>
 
+      <!-- VIP badge near partner -->
+      <xpath expr="//field[@name='partner_id']" position="after">
+        <field name="label_pricing_profile_display" invisible="not label_pricing_profile_display" class="fw-bold text-success"/>
+      </xpath>
+
       <!-- ============================================ -->
       <!-- ZÁLOŽKA "Kalkulace"                          -->
       <!-- ============================================ -->

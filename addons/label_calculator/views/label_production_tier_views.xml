@@ -10,6 +10,7 @@
           <group>
             <group string="Hladina">
               <field name="group_id"/>
+              <field name="pricing_profile_id"/>
               <field name="name"/>
               <field name="min_quantity"/>
               <field name="max_quantity"/>
@@ -58,6 +59,7 @@
     <field name="arch" type="xml">
       <list>
         <field name="group_id"/>
+        <field name="pricing_profile_id" optional="show"/>
         <field name="name"/>
         <field name="min_quantity"/>
         <field name="max_quantity"/>

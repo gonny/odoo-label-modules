@@ -12,6 +12,11 @@
         <field name="label_variable_symbol" string="Variabilní symbol" readonly="1"/>
       </xpath>
 
+      <!-- VIP badge near partner -->
+      <xpath expr="//field[@name='partner_id']" position="after">
+        <field name="label_pricing_profile_display" invisible="not label_pricing_profile_display" class="fw-bold text-success"/>
+      </xpath>
+
       <!-- Přidat kalkulační sloupce do řádků faktury -->
       <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='price_unit']" position="before">
         <field name="label_material_id" string="Varianta" optional="hide"/>

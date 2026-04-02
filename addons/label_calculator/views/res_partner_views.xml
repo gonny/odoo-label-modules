@@ -9,12 +9,27 @@
       <xpath expr="//page[@name='internal_notes']" position="before">
         <page string="Štítky – slevy" name="label_discounts">
           <group>
+            <group string="VIP status">
+              <field name="label_is_vip"/>
+              <field name="label_pricing_profile_id"
+                     invisible="not label_is_vip"
+                     domain="[('is_vip', '=', True)]"/>
+              <div invisible="not label_vip_eligible or label_is_vip" class="text-warning fw-bold">
+                ⭐ Nárok na VIP
+              </div>
+              <div invisible="not label_is_vip" class="text-success fw-bold">
+                ⭐ <field name="label_pricing_profile_id" widget="text" readonly="1" nolabel="1" class="d-inline"/>
+              </div>
+              <field name="label_vip_eligible" invisible="1"/>
+            </group>
+          </group>
+          <group>
             <group string="Automatická sleva">
               <field name="label_total_invoiced" widget="monetary"/>
               <field name="label_discount_tier_id"/>
             </group>
             <group string="Přetížení">
-              <field name="label_discount_override"/>
+              <field name="label_discount_override" invisible="label_is_vip"/>
               <field name="label_effective_discount" widget="percentage"/>
             </group>
           </group>

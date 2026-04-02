@@ -29,6 +29,8 @@
 
   <menuitem id="label_menu_machines" name="Stroje" parent="label_menu_config" action="label_machine_action" sequence="10"/>
 
+  <menuitem id="label_menu_pricing_profiles" name="Cenové profily" parent="label_menu_config" action="label_pricing_profile_action" sequence="20"/>
+
   <menuitem id="label_menu_settings" name="Nastavení" parent="label_menu_config" action="label_config_settings_action" sequence="99"/>
 
 

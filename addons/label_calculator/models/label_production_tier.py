@@ -9,6 +9,13 @@ class LabelProductionTier(models.Model):
     name = fields.Char(string="Název hladiny", required=True)
     active = fields.Boolean(default=True)
 
+    pricing_profile_id = fields.Many2one(
+        "label.pricing.profile",
+        string="Cenový profil",
+        help="Cenový profil, ke kterému tato hladina patří.",
+        index=True,
+    )
+
     group_id = fields.Many2one(
         "label.material.group",
         string="Skupina materiálů",

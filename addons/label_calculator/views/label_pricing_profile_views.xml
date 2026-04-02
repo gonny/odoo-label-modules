@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="label_pricing_profile_view_form" model="ir.ui.view">
+    <field name="name">label.pricing.profile.form</field>
+    <field name="model">label.pricing.profile</field>
+    <field name="arch" type="xml">
+      <form string="Cenový profil">
+        <sheet>
+          <div class="oe_button_box" name="button_box">
+            <button class="oe_stat_button" type="object"
+                    name="action_view_tiers" icon="fa-list-ol">
+              <field name="tier_count" widget="statinfo" string="Hladiny"/>
+            </button>
+          </div>
+          <widget name="web_ribbon" title="Archivováno" bg_color="text-bg-danger" invisible="active"/>
+          <group>
+            <group string="Profil">
+              <field name="name"/>
+              <field name="code"/>
+              <field name="sequence"/>
+              <field name="active" invisible="1"/>
+            </group>
+            <group string="Nastavení">
+              <field name="is_default"/>
+              <field name="is_vip"/>
+            </group>
+          </group>
+          <group string="Popis">
+            <field name="description" nolabel="1" placeholder="Poznámky k tomuto profilu..."/>
+          </group>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+  <record id="label_pricing_profile_view_list" model="ir.ui.view">
+    <field name="name">label.pricing.profile.list</field>
+    <field name="model">label.pricing.profile</field>
+    <field name="arch" type="xml">
+      <list>
+        <field name="sequence" widget="handle"/>
+        <field name="name"/>
+        <field name="code"/>
+        <field name="is_default"/>
+        <field name="is_vip"/>
+        <field name="tier_count"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="label_pricing_profile_action" model="ir.actions.act_window">
+    <field name="name">Cenové profily</field>
+    <field name="res_model">label.pricing.profile</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+</odoo>
