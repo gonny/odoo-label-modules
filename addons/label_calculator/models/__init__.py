@@ -1,3 +1,4 @@
+from . import label_pricing_profile
 from . import label_machine
 from . import label_material_group
 from . import label_material

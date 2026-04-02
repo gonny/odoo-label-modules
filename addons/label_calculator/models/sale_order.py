@@ -11,6 +11,14 @@ class SaleOrder(models.Model):
         string="Historie štítků zákazníka",
     )
 
+    label_pricing_profile_id = fields.Many2one(
+        "label.pricing.profile",
+        string="Cenový profil zákazníka",
+        related="partner_id.label_pricing_profile_id",
+        store=False,
+        readonly=True,
+    )
+
     @api.depends("partner_id")
     def _compute_partner_history(self):
         for order in self:

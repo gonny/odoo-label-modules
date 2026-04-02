@@ -1819,3 +1819,319 @@ class TestLabelCalculator(TransactionCase):
             "TEST 34: pricelist_price=%.4f (expected=%.4f) ✅",
             pricelist_price, expected,
         )
+
+    # ─────────────────────────────────────────────
+    # TEST 35: VIP cenový profil – model a omezení
+    # ─────────────────────────────────────────────
+    def test_35_vip_pricing_profile_model(self):
+        """Ověření modelu label.pricing.profile – vytvoření, kód, výchozí profil."""
+        # Výchozí profil Standard musí existovat (z seed dat)
+        standard = self.env["label.pricing.profile"].search(
+            [("is_default", "=", True)], limit=1
+        )
+        self.assertTrue(standard, "Standard profil musí existovat")
+        self.assertFalse(standard.is_vip, "Standard profil nesmí být VIP")
+
+        # VIP1 a VIP2 musí existovat
+        vip1 = self.env["label.pricing.profile"].search(
+            [("code", "=", "vip1")], limit=1
+        )
+        vip2 = self.env["label.pricing.profile"].search(
+            [("code", "=", "vip2")], limit=1
+        )
+        self.assertTrue(vip1, "VIP1 profil musí existovat")
+        self.assertTrue(vip2, "VIP2 profil musí existovat")
+        self.assertTrue(vip1.is_vip, "VIP1 musí mít is_vip=True")
+        self.assertTrue(vip2.is_vip, "VIP2 musí mít is_vip=True")
+
+        # Existující hladiny musí mít přiřazený Standard profil
+        tiers_standard = self.env["label.production.tier"].search(
+            [("pricing_profile_id", "=", standard.id)]
+        )
+        self.assertTrue(len(tiers_standard) > 0, "Musí existovat hladiny přiřazené ke Standard profilu")
+
+        _logger.info(
+            "TEST 35: Profily – Standard=%s, VIP1=%s, VIP2=%s, Standard hladiny=%d ✅",
+            standard.name, vip1.name, vip2.name, len(tiers_standard),
+        )
+
+    # ─────────────────────────────────────────────
+    # TEST 36: VIP kalkulace – VIP tier se použije místo Standard
+    # ─────────────────────────────────────────────
+    def test_36_vip_tier_selection(self):
+        """VIP profil → použije VIP tier s lepšími parametry (vyšší výkon, nižší marže)."""
+        standard = self.env["label.pricing.profile"].search(
+            [("is_default", "=", True)], limit=1
+        )
+        vip1 = self.env["label.pricing.profile"].search(
+            [("code", "=", "vip1"), ("is_vip", "=", True)], limit=1
+        )
+        self.assertTrue(standard and vip1, "Profily musí existovat")
+
+        # Vytvoř VIP tier pro skupinu koženky s lepšími parametry
+        vip_tier = self.env["label.production.tier"].create({
+            "name": "VIP1 Unlimited",
+            "group_id": self.group_leatherette.id,
+            "pricing_profile_id": vip1.id,
+            "min_quantity": 1,
+            "max_quantity": 999999,
+            "pieces_per_hour": 150,    # vyšší výkon
+            "margin_pct": 120,         # nižší marže
+            "waste_test_percentage": 5,
+            "waste_pruning_percentage": 5,
+        })
+
+        # Kalkulace s Standard profilem
+        result_std = self.calc.compute_price(
+            material_id=self.mat_leatherette.id,
+            width_mm=30,
+            height_mm=20,
+            quantity=50,
+            pricing_profile_id=standard.id,
+        )
+
+        # Kalkulace s VIP1 profilem
+        result_vip = self.calc.compute_price(
+            material_id=self.mat_leatherette.id,
+            width_mm=30,
+            height_mm=20,
+            quantity=50,
+            pricing_profile_id=vip1.id,
+        )
+
+        self.assertTrue(result_std["unit_price"] > 0, "Standard cena musí být > 0")
+        self.assertTrue(result_vip["unit_price"] > 0, "VIP cena musí být > 0")
+
+        # VIP tier má nižší marži a vyšší výkon → musí být levnější
+        self.assertLess(
+            result_vip["unit_price"],
+            result_std["unit_price"],
+            "VIP cena musí být nižší než Standard cena",
+        )
+
+        # Výsledek musí obsahovat VIP tier jméno
+        self.assertEqual(result_vip["tier_name"], "VIP1 Unlimited")
+
+        _logger.info(
+            "TEST 36: Standard cena=%.2f, VIP1 cena=%.2f (levnější o %.2f) ✅",
+            result_std["unit_price"],
+            result_vip["unit_price"],
+            result_std["unit_price"] - result_vip["unit_price"],
+        )
+
+    # ─────────────────────────────────────────────
+    # TEST 37: VIP fallback – pokud není VIP tier, použije se Standard
+    # ─────────────────────────────────────────────
+    def test_37_vip_fallback_to_standard(self):
+        """Pokud pro VIP profil neexistuje tier, použije se Standard tier (fallback)."""
+        vip2 = self.env["label.pricing.profile"].search(
+            [("code", "=", "vip2"), ("is_vip", "=", True)], limit=1
+        )
+        self.assertTrue(vip2, "VIP2 profil musí existovat")
+
+        # VIP2 nemá žádné tiery pro skupinu koženky → fallback na Standard
+        result = self.calc.compute_price(
+            material_id=self.mat_leatherette.id,
+            width_mm=30,
+            height_mm=20,
+            quantity=50,
+            pricing_profile_id=vip2.id,
+        )
+
+        # Kalkulace musí uspět (fallback na Standard)
+        self.assertTrue(result["unit_price"] > 0, "Cena musí být > 0 i při VIP2 bez tieru")
+        # Tier name musí být Standard tier
+        self.assertIsNotNone(result.get("tier_name"), "Tier name nesmí být None")
+        self.assertNotIn("error", [w["type"] for w in result.get("warnings", [])],
+            "Nesmí být chyba – fallback musí fungovat")
+
+        _logger.info(
+            "TEST 37: VIP2 fallback → tier=%s, cena=%.2f ✅",
+            result.get("tier_name"), result["unit_price"],
+        )
+
+    # ─────────────────────────────────────────────
+    # TEST 38: VIP zákazník – sleva = 0
+    # ─────────────────────────────────────────────
+    def test_38_vip_customer_no_discount(self):
+        """VIP zákazník má efektivní slevu = 0, i když má Bronze/Silver/Gold hladinu."""
+        vip1 = self.env["label.pricing.profile"].search(
+            [("code", "=", "vip1"), ("is_vip", "=", True)], limit=1
+        )
+        self.assertTrue(vip1, "VIP1 profil musí existovat")
+
+        # Vytvoř slevovou hladinu Gold
+        tier_gold = self.env["partner.discount.tier"].create({
+            "name": "Zlatý test VIP",
+            "min_spent": 1,   # velmi nízký práh pro test
+            "discount_pct": 15,
+        })
+
+        # Vytvoř zákazníka s vysokou útratou → Gold hladina
+        partner_vip = self.env["res.partner"].create({
+            "name": "VIP Zákazník Test",
+            "label_discount_override": 15,   # simuluj Gold slevu
+            "label_is_vip": False,
+        })
+
+        # Bez VIP → sleva 15%
+        self.assertEqual(
+            partner_vip.label_effective_discount, 15,
+            "Bez VIP musí být sleva 15%",
+        )
+
+        # Přepni na VIP
+        partner_vip.write({
+            "label_is_vip": True,
+            "label_pricing_profile_id": vip1.id,
+        })
+
+        # S VIP → sleva musí být 0
+        self.assertEqual(
+            partner_vip.label_effective_discount, 0,
+            "VIP zákazník musí mít slevu 0",
+        )
+
+        # Vypni VIP → sleva se vrátí
+        partner_vip.write({"label_is_vip": False})
+        self.assertEqual(
+            partner_vip.label_effective_discount, 15,
+            "Po vypnutí VIP se musí vrátit původní sleva",
+        )
+
+        _logger.info("TEST 38: VIP sleva = 0, po vypnutí = 15%% ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 39: VIP eligibility – výpočet nároku
+    # ─────────────────────────────────────────────
+    def test_39_vip_eligibility_computation(self):
+        """VIP eligibilita: 3 faktury > 3000 Kč každá a > 300 ks každá."""
+        product = self.env["product.template"].create({
+            "name": "Test VIP Eligibility Product",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        partner = self.env["res.partner"].create({"name": "VIP Eligibility Test Partner"})
+
+        def create_posted_invoice(qty, price_unit):
+            """Vytvoří a potvrdí fakturu s daným množstvím a cenou."""
+            order = self.env["sale.order"].create({"partner_id": partner.id})
+            line = self.env["sale.order.line"].create({
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": qty,
+                "price_unit": price_unit,
+            })
+            order.action_confirm()
+            invoice = order._create_invoices()
+            invoice.action_post()
+            return invoice
+
+        # Zákazník s méně než 3 fakturami → není eligible
+        partner._compute_label_vip_eligible()
+        self.assertFalse(partner.label_vip_eligible, "Bez faktur nesmí být eligible")
+
+        # Vytvoř 2 faktury > 3000 Kč s > 300 ks
+        inv1 = create_posted_invoice(qty=400, price_unit=10)   # 4000 Kč
+        inv2 = create_posted_invoice(qty=500, price_unit=10)   # 5000 Kč
+        partner._compute_label_vip_eligible()
+        self.assertFalse(partner.label_vip_eligible, "Pouze 2 faktury nestačí na VIP")
+
+        # Vytvoř 3. fakturu > 3000 Kč s > 300 ks
+        inv3 = create_posted_invoice(qty=350, price_unit=10)   # 3500 Kč
+        partner._compute_label_vip_eligible()
+        self.assertTrue(partner.label_vip_eligible, "3 faktury > 3000 Kč s > 300 ks = VIP eligible")
+
+        _logger.info("TEST 39: VIP eligibilita – 3 faktury splňují podmínky ✅")
+
+    # ─────────────────────────────────────────────
+    # TEST 40: VIP SO linka – cenový profil ze zákazníka se použije
+    # ─────────────────────────────────────────────
+    def test_40_vip_so_line_uses_partner_profile(self):
+        """SO linka čte pricing_profile_id ze zákazníka a předá kalkulátoru."""
+        vip1 = self.env["label.pricing.profile"].search(
+            [("code", "=", "vip1"), ("is_vip", "=", True)], limit=1
+        )
+        standard = self.env["label.pricing.profile"].search(
+            [("is_default", "=", True)], limit=1
+        )
+        self.assertTrue(vip1 and standard, "Profily musí existovat")
+
+        # Vytvoř VIP tier pro skupinu koženky
+        vip_tier = self.env["label.production.tier"].create({
+            "name": "VIP1 SO Test",
+            "group_id": self.group_leatherette.id,
+            "pricing_profile_id": vip1.id,
+            "min_quantity": 1,
+            "max_quantity": 999999,
+            "pieces_per_hour": 200,
+            "margin_pct": 80,
+            "waste_test_percentage": 2,
+            "waste_pruning_percentage": 2,
+        })
+
+        product = self.env["product.template"].create({
+            "name": "Test VIP SO Product",
+            "type": "service",
+            "pricing_type": "calculator",
+            "label_material_group_id": self.group_leatherette.id,
+            "invoice_policy": "order",
+        })
+
+        # Standard zákazník
+        partner_std = self.env["res.partner"].create({
+            "name": "Standard SO Test Partner",
+            "label_pricing_profile_id": standard.id,
+        })
+
+        # VIP zákazník
+        partner_vip = self.env["res.partner"].create({
+            "name": "VIP SO Test Partner",
+            "label_is_vip": True,
+            "label_pricing_profile_id": vip1.id,
+        })
+
+        # Vytvoř SO pro Standard zákazníka
+        order_std = self.env["sale.order"].create({"partner_id": partner_std.id})
+        line_std = self.env["sale.order.line"].create({
+            "order_id": order_std.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+
+        # Vytvoř SO pro VIP zákazníka
+        order_vip = self.env["sale.order"].create({"partner_id": partner_vip.id})
+        line_vip = self.env["sale.order.line"].create({
+            "order_id": order_vip.id,
+            "product_id": product.product_variant_id.id,
+            "product_uom_qty": 50,
+            "label_material_id": self.mat_leatherette.id,
+            "label_width_mm": 30,
+            "label_height_mm": 20,
+        })
+
+        # VIP zákazník musí mít nižší cenu díky lepšímu tieru
+        self.assertTrue(line_std.price_unit > 0, "Standard cena musí být > 0")
+        self.assertTrue(line_vip.price_unit > 0, "VIP cena musí být > 0")
+        self.assertLess(
+            line_vip.price_unit,
+            line_std.price_unit,
+            "VIP zákazník musí mít nižší cenu než Standard zákazník",
+        )
+
+        # VIP zákazník má slevu = 0
+        self.assertEqual(line_vip.discount, 0, "VIP zákazník nesmí mít slevu na SO lince")
+
+        _logger.info(
+            "TEST 40: SO Standard=%.2f, VIP=%.2f (levnější o %.2f), VIP sleva=%.0f%% ✅",
+            line_std.price_unit,
+            line_vip.price_unit,
+            line_std.price_unit - line_vip.price_unit,
+            line_vip.discount,
+        )

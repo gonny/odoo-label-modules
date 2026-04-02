@@ -185,11 +185,37 @@
       <field name="component_price">1.20</field>
     </record>
 
+    <!-- ============ CENOVÉ PROFILY ============ -->
+    <record id="pricing_profile_standard" model="label.pricing.profile">
+      <field name="name">Standard</field>
+      <field name="code">standard</field>
+      <field name="is_default" eval="True"/>
+      <field name="is_vip" eval="False"/>
+      <field name="sequence">10</field>
+    </record>
+
+    <record id="pricing_profile_vip1" model="label.pricing.profile">
+      <field name="name">VIP1</field>
+      <field name="code">vip1</field>
+      <field name="is_default" eval="False"/>
+      <field name="is_vip" eval="True"/>
+      <field name="sequence">20</field>
+    </record>
+
+    <record id="pricing_profile_vip2" model="label.pricing.profile">
+      <field name="name">VIP2</field>
+      <field name="code">vip2</field>
+      <field name="is_default" eval="False"/>
+      <field name="is_vip" eval="True"/>
+      <field name="sequence">30</field>
+    </record>
+
     <!-- ============ HLADINY ============ -->
 
     <record id="tier_leatherette_upto_30" model="label.production.tier">
       <field name="name">Do 30</field>
       <field name="group_id" ref="group_leatherette"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">1</field>
       <field name="max_quantity">29</field>
       <field name="pieces_per_hour">80</field>
@@ -202,6 +228,7 @@
     <record id="tier_leatherette_upto_50" model="label.production.tier">
       <field name="name">Do 50</field>
       <field name="group_id" ref="group_leatherette"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">30</field>
       <field name="max_quantity">49</field>
       <field name="pieces_per_hour">85</field>
@@ -214,6 +241,7 @@
     <record id="tier_leatherette_upto_100" model="label.production.tier">
       <field name="name">Do 100</field>
       <field name="group_id" ref="group_leatherette"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">50</field>
       <field name="max_quantity">99</field>
       <field name="pieces_per_hour">90</field>
@@ -226,6 +254,7 @@
     <record id="tier_leatherette_upto_500" model="label.production.tier">
       <field name="name">Do 500</field>
       <field name="group_id" ref="group_leatherette"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">100</field>
       <field name="max_quantity">499</field>
       <field name="pieces_per_hour">100</field>
@@ -238,6 +267,7 @@
     <record id="tier_leatherette_upto_1000" model="label.production.tier">
       <field name="name">Do 1000</field>
       <field name="group_id" ref="group_leatherette"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">500</field>
       <field name="max_quantity">999</field>
       <field name="pieces_per_hour">100</field>
@@ -250,6 +280,7 @@
     <record id="tier_leatherette_morethan_1000" model="label.production.tier">
       <field name="name">Více než 1000</field>
       <field name="group_id" ref="group_leatherette"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">1000</field>
       <field name="max_quantity">999999</field>
       <field name="pieces_per_hour">100</field>
@@ -262,6 +293,7 @@
     <record id="tier_satin_upto_200" model="label.production.tier">
       <field name="name">Do 200</field>
       <field name="group_id" ref="group_satin"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">1</field>
       <field name="max_quantity">199</field>
       <field name="pieces_per_hour">800</field>
@@ -274,6 +306,7 @@
     <record id="tier_satin_upto_500" model="label.production.tier">
       <field name="name">Do 500</field>
       <field name="group_id" ref="group_satin"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">200</field>
       <field name="max_quantity">499</field>
       <field name="pieces_per_hour">800</field>
@@ -286,6 +319,7 @@
     <record id="tier_satin_upto_1000" model="label.production.tier">
       <field name="name">Do 1000</field>
       <field name="group_id" ref="group_satin"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">500</field>
       <field name="max_quantity">999</field>
       <field name="pieces_per_hour">800</field>
@@ -298,6 +332,7 @@
     <record id="tier_satin_upto_5000" model="label.production.tier">
       <field name="name">Do 5000</field>
       <field name="group_id" ref="group_satin"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">1000</field>
       <field name="max_quantity">4999</field>
       <field name="pieces_per_hour">800</field>
@@ -310,6 +345,7 @@
     <record id="tier_satin_morethan_5000" model="label.production.tier">
       <field name="name">Více než 5000</field>
       <field name="group_id" ref="group_satin"/>
+      <field name="pricing_profile_id" ref="pricing_profile_standard"/>
       <field name="min_quantity">5000</field>
       <field name="max_quantity">999999</field>
       <field name="pieces_per_hour">800</field>

@@ -37,6 +37,7 @@ class LabelCalculator(models.AbstractModel):
         quantity=1,
         is_repeat_design=False,
         addon_material_ids=None,
+        pricing_profile_id=None,
     ):
         """Vypočítá kompletní cenu za 1 ks a celkem.
 
@@ -47,6 +48,7 @@ class LabelCalculator(models.AbstractModel):
             quantity: int – počet kusů
             is_repeat_design: bool – opakovaný design (test odpad = 0)
             addon_material_ids: list[int] – ID příplatkových materiálů
+            pricing_profile_id: int – ID cenového profilu zákazníka (None = výchozí)
 
         Returns:
             dict s klíči: unit_price, total_price, breakdown, warnings
@@ -87,7 +89,7 @@ class LabelCalculator(models.AbstractModel):
         config = self._get_config()
 
         # Najdi tier
-        tier = self._find_tier(group, quantity)
+        tier = self._find_tier(group, quantity, pricing_profile_id=pricing_profile_id)
         if not tier:
             return self._error_result(
                 f"Nenalezena množstevní hladina pro {quantity} ks "
@@ -167,6 +169,7 @@ class LabelCalculator(models.AbstractModel):
             "material_cost_only": round(material_cost_only, 4),
             "quantity": quantity,
             "tier_name": tier.name,
+            "profile_name": tier.pricing_profile_id.name if tier.pricing_profile_id else None,
             "margin_pct": margin_pct,
             "breakdown": {
                 "main": main_result,
@@ -398,17 +401,45 @@ class LabelCalculator(models.AbstractModel):
         import math
         return math.ceil(price * 10) / 10
 
-    def _find_tier(self, group, quantity):
-        """Najde správnou hladinu pro dané množství a skupinu."""
-        return self.env["label.production.tier"].search(
-            [
-                ("group_id", "=", group.id),
-                ("min_quantity", "<=", quantity),
-                ("max_quantity", ">=", quantity),
-                ("active", "=", True),
-            ],
+    def _find_tier(self, group, quantity, pricing_profile_id=None):
+        """Najde správnou hladinu pro dané množství, skupinu a cenový profil.
+
+        Args:
+            group: label.material.group recordset
+            quantity: int – počet kusů
+            pricing_profile_id: int|None – ID cenového profilu zákazníka;
+                None = použij výchozí Standard profil
+
+        Returns:
+            label.production.tier recordset (může být prázdný)
+
+        Pokud profil není nalezen nebo nemá hladinu, použije se výchozí Standard profil.
+        """
+        domain = [
+            ("group_id", "=", group.id),
+            ("min_quantity", "<=", quantity),
+            ("max_quantity", ">=", quantity),
+            ("active", "=", True),
+        ]
+        if pricing_profile_id:
+            tier = self.env["label.production.tier"].search(
+                domain + [("pricing_profile_id", "=", pricing_profile_id)],
+                limit=1,
+            )
+            if tier:
+                return tier
+            # Fallback to Standard profile
+        # Use default profile or no profile filter
+        standard = self.env["label.pricing.profile"].search(
+            [("is_default", "=", True), ("active", "=", True)],
             limit=1,
         )
+        if standard:
+            return self.env["label.production.tier"].search(
+                domain + [("pricing_profile_id", "=", standard.id)],
+                limit=1,
+            )
+        return self.env["label.production.tier"].search(domain, limit=1)
 
     def _get_effective_pcs_per_hour(self, material, tier):
         """Vrátí pieces_per_hour – s override pokud existuje."""

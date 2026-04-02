@@ -52,6 +52,16 @@ class LabelProductionTier(models.Model):
         default=10,
     )
 
+    pricing_profile_id = fields.Many2one(
+        "label.pricing.profile",
+        string="Cenový profil",
+        ondelete="restrict",
+        default=lambda self: self.env["label.pricing.profile"].search(
+            [("is_default", "=", True)], limit=1
+        ),
+        help="Cenový profil, ke kterému patří tato hladina.",
+    )
+
     notes = fields.Text(string="Poznámky")
 
     # === Nové: přehled overrides ===

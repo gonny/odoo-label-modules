@@ -26,6 +26,7 @@
         "views/label_machine_views.xml",
         "views/label_material_group_views.xml",
         "views/label_material_views.xml",
+        "views/label_pricing_profile_views.xml",
         "views/label_production_tier_views.xml",
         "views/product_template_views.xml",
         "views/sale_order_line_views.xml",

@@ -192,9 +192,12 @@ class SaleOrderLine(models.Model):
         if (
             self.pricing_type == "calculator"
             and self.order_id.partner_id
-            and self.order_id.partner_id.label_effective_discount > 0
         ):
-            self.discount = self.order_id.partner_id.label_effective_discount
+            # Avoid unnecessary ORM writes by only updating when the discount value changes.
+            # Returns 0 for VIP customers (no tier-based discount); uses tier/override otherwise.
+            discount = self.order_id.partner_id.label_effective_discount
+            if self.discount != discount:
+                self.discount = discount
 
 
     # === Onchange: výběr produktu ===
@@ -399,6 +402,12 @@ class SaleOrderLine(models.Model):
         if self.label_addon_ids:
             addon_ids.extend(self.label_addon_ids.ids)
 
+        # Get partner pricing profile
+        pricing_profile_id = None
+        partner = self.order_id.partner_id
+        if partner and partner.label_pricing_profile_id:
+            pricing_profile_id = partner.label_pricing_profile_id.id
+
         calc = self.env["label.calculator"]
         return calc.compute_price(
             material_id=self.label_material_id.id,
@@ -407,6 +416,7 @@ class SaleOrderLine(models.Model):
             quantity=int(self.product_uom_qty or 1),
             is_repeat_design=self.label_is_repeat_design,
             addon_material_ids=addon_ids or None,
+            pricing_profile_id=pricing_profile_id,
         )
 
     def _format_breakdown(self, result):
@@ -461,6 +471,9 @@ class SaleOrderLine(models.Model):
         lines.append("")
         lines.append("═══ SOUHRN ═══")
         lines.append(f"  Tier:    {result.get('tier_name', '?')}")
+        profile_name = result.get('profile_name')
+        if profile_name:
+            lines.append(f"  Profil:  {profile_name}")
         lines.append(f"  Marže:   {result.get('margin_pct', 0):.0f}%")
         lines.append(
             f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks"

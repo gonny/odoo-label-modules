@@ -25,6 +25,8 @@
   <!-- ============ KONFIGURACE ============ -->
   <menuitem id="label_menu_config" name="Konfigurace" parent="label_menu_root" sequence="90"/>
 
+  <menuitem id="label_menu_pricing_profiles" name="Cenové profily" parent="label_menu_config" action="label_pricing_profile_action" sequence="35"/>
+
   <menuitem id="label_calculator_menu_discount_tiers" name="Zákaznické hladiny" parent="label_menu_config" action="action_partner_discount_tier" sequence="40"/>
 
   <menuitem id="label_menu_machines" name="Stroje" parent="label_menu_config" action="label_machine_action" sequence="10"/>
