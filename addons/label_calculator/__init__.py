@@ -74,3 +74,23 @@ def _post_init_configure(env):
                 vals["loss_account_id"] = expense_account.id
             if vals:
                 rounding.write(vals)
+
+    # ── Phase 6: Set company info (DEV environment) ──
+    company = env.company.sudo()
+    company_partner = company.partner_id.sudo()
+    company_partner.write({
+        "name": "Etiketou",
+        "street": "Dandova 1226",
+        "city": "Praha",
+        "zip": "19000",
+        "country_id": env.ref("base.cz").id,
+        "phone": "777123123",
+        "email": "info@etiketou.com",
+    })
+
+    # ── Phase 7: Enable delivery/invoice addresses on sale orders ──
+    group = env.ref("account.group_delivery_invoice_address", raise_if_not_found=False)
+    if group:
+        internal_users = env.ref("base.group_user", raise_if_not_found=False)
+        if internal_users:
+            internal_users.sudo().write({"implied_ids": [(4, group.id)]})

@@ -50,7 +50,7 @@ restart:  ## Restart Odoo and PostgreSQL containers
 	docker compose restart
 	@echo "✓ Odoo restarted"
 
-reset:  ## Drop DB, recreate, install module with seed data
+reset:  ## Drop DB, recreate, install both modules with seed data
 	@echo "Resetting database …"
 	$(RUN) docker compose down -v
 	$(RUN) docker compose up -d db
@@ -59,16 +59,16 @@ reset:  ## Drop DB, recreate, install module with seed data
 	$(RUN) docker compose up -d
 	@echo "Waiting for Odoo to start …"
 	@sleep 10
-	$(RUN) docker compose run --rm -e PGPASSWORD=odoo odoo \
-		odoo -d $(ODOO_DB) -i $(ODOO_MODULE) --stop-after-init \
-		--without-demo=all --log-level=warn
+	$(RUN) docker compose run --rm odoo \
+		odoo -d $(ODOO_DB) -i label_calculator,label_shipping \
+		--stop-after-init --without-demo=all --log-level=warn
 	$(RUN) docker compose restart odoo
 	@echo "✓ Database reset complete – Odoo ready at http://localhost:$(ODOO_PORT)"
 
-test:  ## Run Odoo unit tests for label_calculator
+test:  ## Run Odoo unit tests for label_calculator and label_shipping
 	$(RUN) docker compose run --rm odoo \
-		odoo -d $(ODOO_DB) -u $(ODOO_MODULE) \
-		--test-tags /$(ODOO_MODULE) \
+		odoo -d $(ODOO_DB) -u label_calculator,label_shipping \
+		--test-tags label_calculator,label_shipping \
 		--stop-after-init \
 		--log-level=test
 

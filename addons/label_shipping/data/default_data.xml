@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <data noupdate="1">
+
+    <!-- ============ SEKVENCE ============ -->
+    <record id="seq_label_shipment" model="ir.sequence">
+      <field name="name">Zásilka</field>
+      <field name="code">label.shipment</field>
+      <field name="prefix">ZAS/</field>
+      <field name="padding">5</field>
+      <field name="company_id" eval="False"/>
+    </record>
+
+    <!-- ============ API KLÍČE (výchozí prázdné) ============ -->
+    <record id="config_packeta_api_password" model="ir.config_parameter">
+      <field name="key">label_shipping.packeta_api_password</field>
+      <field name="value"></field>
+    </record>
+    <record id="config_packeta_indication" model="ir.config_parameter">
+      <field name="key">label_shipping.packeta_indication</field>
+      <field name="value">Etiketou</field>
+    </record>
+    <record id="config_dpd_api_key" model="ir.config_parameter">
+      <field name="key">label_shipping.dpd_api_key</field>
+      <field name="value"></field>
+    </record>
+    <record id="config_dpd_api_dsw" model="ir.config_parameter">
+      <field name="key">label_shipping.dpd_api_dsw</field>
+      <field name="value"></field>
+    </record>
+    <record id="config_dpd_test_mode" model="ir.config_parameter">
+      <field name="key">label_shipping.dpd_test_mode</field>
+      <field name="value">True</field>
+    </record>
+
+    <!-- ============ TESTOVACÍ ZÁKAZNÍK ============ -->
+    <record id="test_customer" model="res.partner">
+      <field name="name">ALPINE PRO, a.s.</field>
+      <field name="is_company" eval="True"/>
+      <field name="street">Průmyslová 1</field>
+      <field name="city">Praha</field>
+      <field name="zip">10000</field>
+      <field name="country_id" ref="base.cz"/>
+      <field name="phone">+420 604 535 450</field>
+      <field name="email">info@alpinepro.cz</field>
+    </record>
+
+    <!-- Doručovací adresa – Packeta výdejní místo (s adresou) -->
+    <record id="test_delivery_packeta" model="res.partner">
+      <field name="name">Z-Box Brno</field>
+      <field name="type">delivery</field>
+      <field name="parent_id" ref="test_customer"/>
+      <field name="street">Brno</field>
+      <field name="city">Brno</field>
+      <field name="zip">60200</field>
+      <field name="country_id" ref="base.cz"/>
+      <field name="phone">+420 604 535 450</field>
+      <field name="email">info@alpinepro.cz</field>
+      <field name="label_preferred_carrier">packeta</field>
+      <field name="label_carrier_service_code">1</field>
+      <field name="label_pickup_point_id">18579</field>
+      <field name="label_pickup_point_name">Z-Box Brno Královo Pole</field>
+    </record>
+
+    <!-- Doručovací adresa – DPD výdejní místo (s adresou) -->
+    <record id="test_delivery_dpd" model="res.partner">
+      <field name="name">DPD Box Praha</field>
+      <field name="type">delivery</field>
+      <field name="parent_id" ref="test_customer"/>
+      <field name="street">Vodičkova 15</field>
+      <field name="city">Praha</field>
+      <field name="zip">11000</field>
+      <field name="country_id" ref="base.cz"/>
+      <field name="phone">+420 604 535 450</field>
+      <field name="email">info@alpinepro.cz</field>
+      <field name="label_preferred_carrier">dpd</field>
+      <field name="label_carrier_service_code">337</field>
+      <field name="label_pickup_point_id">CZ10084</field>
+      <field name="label_pickup_point_name">DPD Pickup Praha Centrum</field>
+    </record>
+
+    <!-- Doručovací adresa – DPD (zdědí adresu od rodiče) -->
+    <record id="test_delivery_dpd_address_inherited" model="res.partner">
+      <field name="name">DPD Box Praha</field>
+      <field name="type">delivery</field>
+      <field name="parent_id" ref="test_customer"/>
+      <field name="label_preferred_carrier">dpd</field>
+      <field name="label_carrier_service_code">337</field>
+      <field name="label_pickup_point_id">CZ10084</field>
+      <field name="label_pickup_point_name">DPD Pickup Praha Centrum</field>
+    </record>
+
+    <!-- Doručovací adresa – Packeta (zdědí adresu od rodiče) -->
+    <record id="test_delivery_packeta_address_inherited" model="res.partner">
+      <field name="name">Z-Box Brno</field>
+      <field name="type">delivery</field>
+      <field name="parent_id" ref="test_customer"/>
+      <field name="label_preferred_carrier">packeta</field>
+      <field name="label_carrier_service_code">1</field>
+      <field name="label_pickup_point_id">18579</field>
+      <field name="label_pickup_point_name">Z-Box Brno Královo Pole</field>
+    </record>
+
+  </data>
+</odoo>
