@@ -115,6 +115,7 @@ class ResPartner(models.Model):
         """
         czk = self.env.ref("base.CZK", raise_if_not_found=False)
         for partner in self:
+            # Already-VIP partners don't need the eligibility badge
             if partner.label_is_vip:
                 partner.label_vip_eligible = False
                 continue
