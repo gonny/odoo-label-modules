@@ -1,2 +1,1 @@
-from . import test_calculator
-from . import test_vip_pricing
+from . import test_calculator, test_vip_pricing

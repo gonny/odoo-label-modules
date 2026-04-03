@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 
 
 class ResPartner(models.Model):
@@ -41,19 +41,20 @@ class ResPartner(models.Model):
         "label.pricing.profile",
         string="Cenový profil",
         help="Cenový profil zákazníka. VIP zákazníci mají vlastní "
-             "množstevní hladiny s lepšími parametry.",
+        "množstevní hladiny s lepšími parametry.",
     )
 
     label_is_vip = fields.Boolean(
         string="VIP zákazník",
         default=False,
         help="VIP zákazníci mají vlastní cenové hladiny a nemají "
-             "nárok na procentuální slevu.",
+        "nárok na procentuální slevu.",
     )
 
     label_vip_eligible = fields.Boolean(
         string="Nárok na VIP",
         compute="_compute_label_vip_eligible",
+        store=False,  # Always recompute from current invoices
         help="Informativní pole – zákazník splňuje podmínky pro VIP.",
     )
 
@@ -61,11 +62,13 @@ class ResPartner(models.Model):
     def _compute_label_total_invoiced(self):
         for partner in self:
             # Součet z potvrzených faktur (posted)
-            invoices = self.env["account.move"].search([
-                ("partner_id", "=", partner.id),
-                ("move_type", "=", "out_invoice"),
-                ("state", "=", "posted"),
-            ])
+            invoices = self.env["account.move"].search(
+                [
+                    ("partner_id", "=", partner.id),
+                    ("move_type", "=", "out_invoice"),
+                    ("state", "=", "posted"),
+                ]
+            )
             total = 0
             for inv in invoices:
                 for line in inv.invoice_line_ids:
@@ -105,6 +108,7 @@ class ResPartner(models.Model):
             else:
                 partner.label_effective_discount = 0
 
+    @api.depends_context("uid")
     def _compute_label_vip_eligible(self):
         """Kontrola nároku na VIP status.
 

@@ -1,4 +1,4 @@
-from odoo import models, fields
+from odoo import fields, models
 
 
 class ResConfigSettings(models.TransientModel):
@@ -59,15 +59,15 @@ class ResConfigSettings(models.TransientModel):
     )
 
     label_vat_surcharge_pct = fields.Float(
-        string="Daň z příjmu",
+        string="Daň z příjmu v %",
         config_parameter="label_calc.vat_surcharge_pct",
         default=15,
     )
 
     label_default_material_margin_pct = fields.Float(
-        string="Výchozí marže na materiál",
+        string="Výchozí marže na materiál v %",
         config_parameter="label_calc.material_margin_pct",
-        default=30,
+        default=100,
     )
 
     label_min_order_price = fields.Float(

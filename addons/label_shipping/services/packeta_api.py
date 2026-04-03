@@ -94,7 +94,9 @@ def create_packet(api_password, data, pickup_point_id=None):
     """
     try:
         xml_body = _build_create_packet_xml(
-            api_password, data, pickup_point_id,
+            api_password,
+            data,
+            pickup_point_id,
         )
         _logger.info("Packeta API request: %s", xml_body)
         response = requests.post(
@@ -105,7 +107,8 @@ def create_packet(api_password, data, pickup_point_id=None):
         )
         _logger.info(
             "Packeta API response: %s %s",
-            response.status_code, response.text[:500],
+            response.status_code,
+            response.text[:500],
         )
         if response.status_code == 200:
             return _parse_response(response.text)
@@ -142,7 +145,8 @@ def get_packet_label(api_password, packet_id):
         )
         _logger.info(
             "Packeta API label response: %s (content_length=%s)",
-            response.status_code, len(response.text),
+            response.status_code,
+            len(response.text),
         )
         if response.status_code == 200:
             resp_root = ET.fromstring(response.text)
@@ -185,7 +189,8 @@ def cancel_packet(api_password, packet_id):
         )
         _logger.info(
             "Packeta API cancel response: %s %s",
-            response.status_code, response.text[:500],
+            response.status_code,
+            response.text[:500],
         )
         if response.status_code == 200:
             return _parse_response(response.text)

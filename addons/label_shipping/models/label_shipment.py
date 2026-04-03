@@ -96,9 +96,7 @@ class LabelShipment(models.Model):
 
     _TRACKING_URL_MAP = {
         "packeta": "https://tracking.packeta.com/cs/?id={number}",
-        "dpd": (
-            "https://tracking.dpd.de/status/cs_CZ/parcel/{number}"
-        ),
+        "dpd": ("https://tracking.dpd.de/status/cs_CZ/parcel/{number}"),
     }
 
     @api.depends("carrier_type", "tracking_number")
@@ -122,8 +120,7 @@ class LabelShipment(models.Model):
         for vals in vals_list:
             if vals.get("name", "New") == "New":
                 vals["name"] = (
-                    self.env["ir.sequence"].next_by_code("label.shipment")
-                    or "New"
+                    self.env["ir.sequence"].next_by_code("label.shipment") or "New"
                 )
         return super().create(vals_list)
 
@@ -139,9 +136,7 @@ class LabelShipment(models.Model):
         if carrier == "none":
             carrier = "packeta"
         self.carrier_type = carrier
-        self.carrier_service_code = (
-            addr.label_carrier_service_code or ""
-        )
+        self.carrier_service_code = addr.label_carrier_service_code or ""
         self.pickup_point_id = addr.label_pickup_point_id or ""
         self.pickup_point_name = addr.label_pickup_point_name or ""
 
@@ -172,7 +167,8 @@ class LabelShipment(models.Model):
         if self.carrier_type == "packeta":
             return {
                 "api_password": ICP.get_param(
-                    "label_shipping.packeta_api_password", "",
+                    "label_shipping.packeta_api_password",
+                    "",
                 ),
                 "indication": ICP.get_param(
                     "label_shipping.packeta_indication",
@@ -182,12 +178,15 @@ class LabelShipment(models.Model):
         elif self.carrier_type == "dpd":
             return {
                 "api_key": ICP.get_param(
-                    "label_shipping.dpd_api_key", "",
+                    "label_shipping.dpd_api_key",
+                    "",
                 ),
                 "dsw": ICP.get_param("label_shipping.dpd_api_dsw", ""),
                 "test_mode": ICP.get_param(
-                    "label_shipping.dpd_test_mode", "True",
-                ) in ("True", "1"),
+                    "label_shipping.dpd_test_mode",
+                    "True",
+                )
+                in ("True", "1"),
             }
         return {}
 
@@ -245,9 +244,7 @@ class LabelShipment(models.Model):
                     "city": company.city or "",
                     "zipCode": (company.zip or "").replace(" ", ""),
                     "countryCode": (
-                        company.country_id.code
-                        if company.country_id
-                        else "CZ"
+                        company.country_id.code if company.country_id else "CZ"
                     ),
                 },
                 "contact": {
@@ -262,9 +259,7 @@ class LabelShipment(models.Model):
                     "city": partner.city or "",
                     "zipCode": (partner.zip or "").replace(" ", ""),
                     "countryCode": (
-                        partner.country_id.code
-                        if partner.country_id
-                        else "CZ"
+                        partner.country_id.code if partner.country_id else "CZ"
                     ),
                 },
                 "contact": {
@@ -310,10 +305,7 @@ class LabelShipment(models.Model):
             if not (partner.zip or "").strip():
                 missing.append("PSČ")
         if missing:
-            return (
-                f"Chybí povinné údaje pro Packeta API: "
-                f"{', '.join(missing)}."
-            )
+            return f"Chybí povinné údaje pro Packeta API: " f"{', '.join(missing)}."
         return False
 
     def action_api_send(self):
@@ -325,13 +317,14 @@ class LabelShipment(models.Model):
         for shipment in self:
             params = shipment._get_carrier_api_params()
             if not any(params.values()):
-                shipment.write({
-                    "state": "error",
-                    "error_message": (
-                        "API klíče nejsou nastaveny."
-                        " Zkontrolujte nastavení."
-                    ),
-                })
+                shipment.write(
+                    {
+                        "state": "error",
+                        "error_message": (
+                            "API klíče nejsou nastaveny." " Zkontrolujte nastavení."
+                        ),
+                    }
+                )
                 continue
 
             success = False
@@ -340,12 +333,15 @@ class LabelShipment(models.Model):
             if shipment.carrier_type == "packeta":
                 validation_error = shipment._validate_packeta_fields()
                 if validation_error:
-                    shipment.write({
-                        "state": "error",
-                        "error_message": validation_error,
-                    })
+                    shipment.write(
+                        {
+                            "state": "error",
+                            "error_message": validation_error,
+                        }
+                    )
                     continue
                 from ..services import packeta_api
+
                 data = shipment._prepare_packeta_data()
                 success, result = packeta_api.create_packet(
                     params["api_password"],
@@ -353,18 +349,23 @@ class LabelShipment(models.Model):
                     pickup_point_id=shipment.pickup_point_id or None,
                 )
                 if success and isinstance(result, dict):
-                    shipment.write({
-                        "carrier_packet_id": result.get("id", ""),
-                        "tracking_number": result.get("barcode", ""),
-                        "state": "sent",
-                        "error_message": False,
-                    })
+                    shipment.write(
+                        {
+                            "carrier_packet_id": result.get("id", ""),
+                            "tracking_number": result.get("barcode", ""),
+                            "state": "sent",
+                            "error_message": False,
+                        }
+                    )
 
             elif shipment.carrier_type == "dpd":
                 from ..services import dpd_api
+
                 data = shipment._prepare_dpd_data()
                 success, result = dpd_api.create_shipment(
-                    params["api_key"], params["dsw"], data,
+                    params["api_key"],
+                    params["dsw"],
+                    data,
                     test_mode=params.get("test_mode", True),
                 )
                 if success and isinstance(result, dict):
@@ -374,40 +375,37 @@ class LabelShipment(models.Model):
                     parcel_ident = ""
                     tracking = ""
                     if parcels:
-                        parcel_ident = str(
-                            parcels[0].get("parcelIdent", "")
-                        )
-                        tracking = str(
-                            parcels[0].get("parcelNumber", "")
-                        )
-                    shipment.write({
-                        "carrier_packet_id": (
-                            parcel_ident or shipment_id
-                        ),
-                        "tracking_number": tracking,
-                        "state": "sent",
-                        "error_message": False,
-                    })
+                        parcel_ident = str(parcels[0].get("parcelIdent", ""))
+                        tracking = str(parcels[0].get("parcelNumber", ""))
+                    shipment.write(
+                        {
+                            "carrier_packet_id": (parcel_ident or shipment_id),
+                            "tracking_number": tracking,
+                            "state": "sent",
+                            "error_message": False,
+                        }
+                    )
 
             if not success:
-                error_msg = (
-                    result if isinstance(result, str) else str(result)
+                error_msg = result if isinstance(result, str) else str(result)
+                shipment.write(
+                    {
+                        "state": "error",
+                        "error_message": error_msg,
+                    }
                 )
-                shipment.write({
-                    "state": "error",
-                    "error_message": error_msg,
-                })
 
     def action_download_label(self):
         """Download shipping label PDF from carrier API."""
         for shipment in self:
             if not shipment.carrier_packet_id:
-                shipment.write({
-                    "error_message": (
-                        "Zásilka nemá ID u dopravce."
-                        " Nejprve odešlete přes API."
-                    ),
-                })
+                shipment.write(
+                    {
+                        "error_message": (
+                            "Zásilka nemá ID u dopravce." " Nejprve odešlete přes API."
+                        ),
+                    }
+                )
                 continue
 
             params = shipment._get_carrier_api_params()
@@ -416,12 +414,14 @@ class LabelShipment(models.Model):
 
             if shipment.carrier_type == "packeta":
                 from ..services import packeta_api
+
                 success, result = packeta_api.get_packet_label(
                     params["api_password"],
                     shipment.carrier_packet_id,
                 )
             elif shipment.carrier_type == "dpd":
                 from ..services import dpd_api
+
                 success, result = dpd_api.get_labels(
                     params["api_key"],
                     shipment.carrier_packet_id,
@@ -429,20 +429,20 @@ class LabelShipment(models.Model):
                 )
 
             if success and isinstance(result, bytes):
-                shipment.write({
-                    "label_pdf": base64.b64encode(result),
-                    "label_pdf_filename": f"label_{shipment.name}.pdf",
-                    "error_message": False,
-                })
-            elif not success:
-                error_msg = (
-                    result if isinstance(result, str) else str(result)
+                shipment.write(
+                    {
+                        "label_pdf": base64.b64encode(result),
+                        "label_pdf_filename": f"label_{shipment.name}.pdf",
+                        "error_message": False,
+                    }
                 )
-                shipment.write({
-                    "error_message": (
-                        f"Chyba stahování štítku: {error_msg}"
-                    ),
-                })
+            elif not success:
+                error_msg = result if isinstance(result, str) else str(result)
+                shipment.write(
+                    {
+                        "error_message": (f"Chyba stahování štítku: {error_msg}"),
+                    }
+                )
 
     def action_api_cancel(self):
         """Cancel shipment via carrier API."""
@@ -457,12 +457,14 @@ class LabelShipment(models.Model):
 
             if shipment.carrier_type == "packeta":
                 from ..services import packeta_api
+
                 success, result = packeta_api.cancel_packet(
                     params["api_password"],
                     shipment.carrier_packet_id,
                 )
             elif shipment.carrier_type == "dpd":
                 from ..services import dpd_api
+
                 success, result = dpd_api.cancel_shipment(
                     params["api_key"],
                     shipment.carrier_packet_id,
@@ -470,15 +472,17 @@ class LabelShipment(models.Model):
                 )
 
             if success:
-                shipment.write({
-                    "state": "cancelled",
-                    "error_message": False,
-                })
-            else:
-                error_msg = (
-                    result if isinstance(result, str) else str(result)
+                shipment.write(
+                    {
+                        "state": "cancelled",
+                        "error_message": False,
+                    }
                 )
-                shipment.write({
-                    "state": "error",
-                    "error_message": f"Chyba rušení: {error_msg}",
-                })
+            else:
+                error_msg = result if isinstance(result, str) else str(result)
+                shipment.write(
+                    {
+                        "state": "error",
+                        "error_message": f"Chyba rušení: {error_msg}",
+                    }
+                )

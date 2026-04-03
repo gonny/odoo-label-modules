@@ -1,5 +1,6 @@
-from odoo import models, api
 import logging
+
+from odoo import api, models
 
 _logger = logging.getLogger(__name__)
 
@@ -67,9 +68,7 @@ class LabelCalculator(models.AbstractModel):
         if quantity_value <= 0:
             return self._error_result("Množství musí být větší než 0")
 
-        if material.material_type == "area" and (
-            width_value <= 0 or height_value <= 0
-        ):
+        if material.material_type == "area" and (width_value <= 0 or height_value <= 0):
             return self._error_result("Rozměry štítku musí být větší než 0")
 
         if material.material_type == "length" and height_value <= 0:
@@ -185,10 +184,18 @@ class LabelCalculator(models.AbstractModel):
     # Kalkulace hlavního materiálu (is_addon=False)
     # ------------------------------------------------------------------
     def _calc_main_material(
-        self, material, group, tier, config,
-        width_mm, height_mm, quantity,
-        is_repeat_design, pcs_per_hour,
-        effective_hourly, margin_pct,
+        self,
+        material,
+        group,
+        tier,
+        config,
+        width_mm,
+        height_mm,
+        quantity,
+        is_repeat_design,
+        pcs_per_hour,
+        effective_hourly,
+        margin_pct,
     ):
         # 1. Materiálové náklady
         mat_cost = self._calc_material_cost(
@@ -247,8 +254,13 @@ class LabelCalculator(models.AbstractModel):
         }
 
     def _calc_material_cost_raw(
-        self, material, tier, config,
-        width_mm, height_mm, is_repeat_design,
+        self,
+        material,
+        tier,
+        config,
+        width_mm,
+        height_mm,
+        is_repeat_design,
     ):
         """Materiálové náklady BEZ marže.
 
@@ -277,14 +289,21 @@ class LabelCalculator(models.AbstractModel):
 
         return cost_with_waste
 
-
     # ------------------------------------------------------------------
     # Kalkulace příplatkového materiálu (is_addon=True)
     # ------------------------------------------------------------------
     def _calc_addon_material(
-        self, material, group, tier, config,
-        width_mm, height_mm, quantity,
-        is_repeat_design, pcs_per_hour, margin_pct,
+        self,
+        material,
+        group,
+        tier,
+        config,
+        width_mm,
+        height_mm,
+        quantity,
+        is_repeat_design,
+        pcs_per_hour,
+        margin_pct,
     ):
         """Addon kalkulace dle typu:
         - area/length/pieces bez stroje → jen materiál
@@ -349,7 +368,8 @@ class LabelCalculator(models.AbstractModel):
             ):
                 machine_cost = (
                     group.machine_id.hourly_amortization / pcs_per_hour
-                    if pcs_per_hour else 0
+                    if pcs_per_hour
+                    else 0
                 )
 
             subtotal = mat_cost + machine_cost
@@ -368,12 +388,17 @@ class LabelCalculator(models.AbstractModel):
     # Materiálové náklady (společné pro main i addon)
     # ------------------------------------------------------------------
     def _calc_material_cost(
-        self, material, tier, config,
-        width_mm, height_mm,
-        is_repeat_design, margin_pct,
+        self,
+        material,
+        tier,
+        config,
+        width_mm,
+        height_mm,
+        is_repeat_design,
+        margin_pct,
     ):
         """Materiálové náklady S marží.
-        
+
         Marže jako přirážka: 320% = cena je (1 + 3.20) = 4.2× nákladu.
         Marže 0% = prodám za náklad.
         """
@@ -396,12 +421,13 @@ class LabelCalculator(models.AbstractModel):
 
     def _round_price(self, price):
         """Zaokrouhlí cenu na 10 haléřů nahoru.
-        
+
         15.21 → 15.30
         15.30 → 15.30 (beze změny)
         15.01 → 15.10
         """
         import math
+
         return math.ceil(price * 10) / 10
 
     def _find_tier(self, group, quantity, profile=None):
@@ -422,7 +448,8 @@ class LabelCalculator(models.AbstractModel):
             # Hledej tier s tímto profilem
             profile_domain = domain + [("pricing_profile_id", "=", profile.id)]
             tier = self.env["label.production.tier"].search(
-                profile_domain, limit=1,
+                profile_domain,
+                limit=1,
             )
             if tier:
                 return tier
@@ -430,14 +457,16 @@ class LabelCalculator(models.AbstractModel):
             # Fallback: hledej s výchozím profilem
             if not profile.is_default:
                 default_profile = self.env["label.pricing.profile"].search(
-                    [("is_default", "=", True)], limit=1,
+                    [("is_default", "=", True)],
+                    limit=1,
                 )
                 if default_profile:
                     fallback_domain = domain + [
                         ("pricing_profile_id", "=", default_profile.id),
                     ]
                     tier = self.env["label.production.tier"].search(
-                        fallback_domain, limit=1,
+                        fallback_domain,
+                        limit=1,
                     )
                     if tier:
                         return tier
@@ -453,7 +482,8 @@ class LabelCalculator(models.AbstractModel):
                 return profile
         # Return default profile
         default = self.env["label.pricing.profile"].search(
-            [("is_default", "=", True)], limit=1,
+            [("is_default", "=", True)],
+            limit=1,
         )
         return default or False
 
@@ -487,7 +517,6 @@ class LabelCalculator(models.AbstractModel):
         prune_factor = 1 / (1 - prune_pct / 100) if prune_pct < 100 else 1
 
         return test_factor * prune_factor
-
 
     def _get_effective_hourly_rate(self, config):
         """Hodinová sazba + fixní náklady rozpočítané na hodinu."""
@@ -524,27 +553,15 @@ class LabelCalculator(models.AbstractModel):
             "fixed_costs_enabled": ICP.get_param(
                 "label_calc.fixed_costs_enabled", "True"
             ),
-            "vat_surcharge_pct": ICP.get_param(
-                "label_calc.vat_surcharge_pct", "15"
-            ),
+            "vat_surcharge_pct": ICP.get_param("label_calc.vat_surcharge_pct", "15"),
             "material_margin_pct": ICP.get_param(
                 "label_calc.material_margin_pct", "30"
             ),
-            "min_order_price": ICP.get_param(
-                "label_calc.min_order_price", "250"
-            ),
-            "min_order_quantity": ICP.get_param(
-                "label_calc.min_order_quantity", "50"
-            ),
-            "fixed_rent_yearly": ICP.get_param(
-                "label_calc.fixed_rent_yearly", "0"
-            ),
-            "fixed_energy_yearly": ICP.get_param(
-                "label_calc.fixed_energy_yearly", "0"
-            ),
-            "fixed_other_yearly": ICP.get_param(
-                "label_calc.fixed_other_yearly", "0"
-            ),
+            "min_order_price": ICP.get_param("label_calc.min_order_price", "250"),
+            "min_order_quantity": ICP.get_param("label_calc.min_order_quantity", "50"),
+            "fixed_rent_yearly": ICP.get_param("label_calc.fixed_rent_yearly", "0"),
+            "fixed_energy_yearly": ICP.get_param("label_calc.fixed_energy_yearly", "0"),
+            "fixed_other_yearly": ICP.get_param("label_calc.fixed_other_yearly", "0"),
             "working_hours_yearly": ICP.get_param(
                 "label_calc.working_hours_yearly", "2000"
             ),
@@ -556,19 +573,23 @@ class LabelCalculator(models.AbstractModel):
 
         min_qty = int(config.get("min_order_quantity", 50))
         if quantity < min_qty:
-            warnings.append({
-                "type": "quantity",
-                "message": f"Množství ({quantity} ks) je pod doporučeným "
-                           f"minimem ({min_qty} ks)",
-            })
+            warnings.append(
+                {
+                    "type": "quantity",
+                    "message": f"Množství ({quantity} ks) je pod doporučeným "
+                    f"minimem ({min_qty} ks)",
+                }
+            )
 
         min_price = float(config.get("min_order_price", 250))
         if total_price < min_price:
-            warnings.append({
-                "type": "price",
-                "message": f"Cena zakázky ({total_price:.0f} Kč) je pod "
-                           f"minimem ({min_price:.0f} Kč)",
-            })
+            warnings.append(
+                {
+                    "type": "price",
+                    "message": f"Cena zakázky ({total_price:.0f} Kč) je pod "
+                    f"minimem ({min_price:.0f} Kč)",
+                }
+            )
 
         return warnings
 

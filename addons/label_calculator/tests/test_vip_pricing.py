@@ -1,8 +1,8 @@
 import logging
 import math
 
-from odoo.tests.common import TransactionCase
 from odoo.exceptions import ValidationError
+from odoo.tests.common import TransactionCase
 
 _logger = logging.getLogger(__name__)
 
@@ -17,202 +17,243 @@ class TestVIPPricingProfiles(TransactionCase):
         ICP = cls.env["ir.config_parameter"].sudo()
 
         # === Nastavení – výchozí pro testy ===
-        settings = cls.env["res.config.settings"].create({
-            "label_hourly_rate": 810,
-            "label_admin_overhead_enabled": False,
-            "label_admin_overhead_minutes": 15,
-            "label_amortization_enabled": True,
-            "label_fixed_costs_enabled": True,
-            "label_fixed_rent_yearly": 7000,
-            "label_fixed_energy_yearly": 27000,
-            "label_fixed_other_yearly": 0,
-            "label_working_hours_yearly": 2000,
-            "label_vat_surcharge_pct": 15,
-            "label_default_material_margin_pct": 30,
-            "label_min_order_price": 250,
-            "label_min_order_quantity": 50,
-        })
+        settings = cls.env["res.config.settings"].create(
+            {
+                "label_hourly_rate": 810,
+                "label_admin_overhead_enabled": False,
+                "label_admin_overhead_minutes": 15,
+                "label_amortization_enabled": True,
+                "label_fixed_costs_enabled": True,
+                "label_fixed_rent_yearly": 7000,
+                "label_fixed_energy_yearly": 27000,
+                "label_fixed_other_yearly": 0,
+                "label_working_hours_yearly": 2000,
+                "label_vat_surcharge_pct": 15,
+                "label_default_material_margin_pct": 30,
+                "label_min_order_price": 250,
+                "label_min_order_quantity": 50,
+            }
+        )
         settings.set_values()
 
         # === Stroje ===
-        cls.machine_laser = cls.env["label.machine"].create({
-            "name": "Laser CO2",
-            "purchase_price": 1000000,
-            "lifetime_years": 15,
-            "working_days_per_week": "5",
-            "hours_per_day": 5,
-            "weeks_per_year": 44,
-        })
+        cls.machine_laser = cls.env["label.machine"].create(
+            {
+                "name": "Laser CO2",
+                "purchase_price": 1000000,
+                "lifetime_years": 15,
+                "working_days_per_week": "5",
+                "hours_per_day": 5,
+                "weeks_per_year": 44,
+            }
+        )
 
-        cls.machine_printer = cls.env["label.machine"].create({
-            "name": "Tiskárna etiket",
-            "purchase_price": 80000,
-            "lifetime_years": 5,
-            "working_days_per_week": "5",
-            "hours_per_day": 4,
-            "weeks_per_year": 44,
-        })
+        cls.machine_printer = cls.env["label.machine"].create(
+            {
+                "name": "Tiskárna etiket",
+                "purchase_price": 80000,
+                "lifetime_years": 5,
+                "working_days_per_week": "5",
+                "hours_per_day": 4,
+                "weeks_per_year": 44,
+            }
+        )
 
         # === Skupiny ===
-        cls.group_leatherette = cls.env["label.material.group"].create({
-            "name": "Koženka Royal",
-            "material_type": "area",
-            "is_addon": False,
-            "default_margin_pct": 35,
-            "machine_id": cls.machine_laser.id,
-        })
+        cls.group_leatherette = cls.env["label.material.group"].create(
+            {
+                "name": "Koženka Royal",
+                "material_type": "area",
+                "is_addon": False,
+                "default_margin_pct": 35,
+                "machine_id": cls.machine_laser.id,
+            }
+        )
 
-        cls.group_satin = cls.env["label.material.group"].create({
-            "name": "Satén",
-            "material_type": "length",
-            "is_addon": False,
-            "default_margin_pct": 25,
-            "machine_id": cls.machine_printer.id,
-        })
+        cls.group_satin = cls.env["label.material.group"].create(
+            {
+                "name": "Satén",
+                "material_type": "length",
+                "is_addon": False,
+                "default_margin_pct": 25,
+                "machine_id": cls.machine_printer.id,
+            }
+        )
 
         # === Materiály ===
-        cls.mat_leatherette = cls.env["label.material"].create({
-            "name": "Černo / stříbrná",
-            "group_id": cls.group_leatherette.id,
-            "color_name": "Přírodní stříbrná",
-            "purchase_price": 310,
-            "purchase_vat_included": True,
-            "purchase_vat_pct": 21,
-            "sheet_width_mm": 600,
-            "sheet_height_mm": 300,
-            "thickness_mm": 0.8,
-        })
+        cls.mat_leatherette = cls.env["label.material"].create(
+            {
+                "name": "Černo / stříbrná",
+                "group_id": cls.group_leatherette.id,
+                "color_name": "Přírodní stříbrná",
+                "purchase_price": 310,
+                "purchase_vat_included": True,
+                "purchase_vat_pct": 21,
+                "sheet_width_mm": 600,
+                "sheet_height_mm": 300,
+                "thickness_mm": 0.8,
+            }
+        )
 
-        cls.mat_satin_20 = cls.env["label.material"].create({
-            "name": "Bílá 20mm",
-            "group_id": cls.group_satin.id,
-            "color_name": "Bílý",
-            "purchase_price": 509,
-            "purchase_vat_included": False,
-            "purchase_vat_pct": 21,
-            "roll_width_mm": 20,
-            "roll_length_m": 200,
-        })
+        cls.mat_satin_20 = cls.env["label.material"].create(
+            {
+                "name": "Bílá 20mm",
+                "group_id": cls.group_satin.id,
+                "color_name": "Bílý",
+                "purchase_price": 509,
+                "purchase_vat_included": False,
+                "purchase_vat_pct": 21,
+                "roll_width_mm": 20,
+                "roll_length_m": 200,
+            }
+        )
 
         # === Cenové profily ===
         # Search for existing profiles from seed data first
-        existing_standard = cls.env["label.pricing.profile"].search([
-            ("code", "=", "standard"),
-        ], limit=1)
+        existing_standard = cls.env["label.pricing.profile"].search(
+            [
+                ("code", "=", "standard"),
+            ],
+            limit=1,
+        )
         if existing_standard:
             cls.profile_standard = existing_standard
         else:
-            cls.profile_standard = cls.env["label.pricing.profile"].create({
-                "name": "Standard",
-                "code": "standard",
-                "is_default": True,
-                "is_vip": False,
-                "sequence": 10,
-            })
+            cls.profile_standard = cls.env["label.pricing.profile"].create(
+                {
+                    "name": "Standard",
+                    "code": "standard",
+                    "is_default": True,
+                    "is_vip": False,
+                    "sequence": 10,
+                }
+            )
 
-        existing_vip1 = cls.env["label.pricing.profile"].search([
-            ("code", "=", "vip1"),
-        ], limit=1)
+        existing_vip1 = cls.env["label.pricing.profile"].search(
+            [
+                ("code", "=", "vip1"),
+            ],
+            limit=1,
+        )
         if existing_vip1:
             cls.profile_vip1 = existing_vip1
         else:
-            cls.profile_vip1 = cls.env["label.pricing.profile"].create({
-                "name": "VIP1",
-                "code": "vip1",
-                "is_default": False,
-                "is_vip": True,
-                "sequence": 20,
-            })
+            cls.profile_vip1 = cls.env["label.pricing.profile"].create(
+                {
+                    "name": "VIP1",
+                    "code": "vip1",
+                    "is_default": False,
+                    "is_vip": True,
+                    "sequence": 20,
+                }
+            )
 
-        existing_vip2 = cls.env["label.pricing.profile"].search([
-            ("code", "=", "vip2"),
-        ], limit=1)
+        existing_vip2 = cls.env["label.pricing.profile"].search(
+            [
+                ("code", "=", "vip2"),
+            ],
+            limit=1,
+        )
         if existing_vip2:
             cls.profile_vip2 = existing_vip2
         else:
-            cls.profile_vip2 = cls.env["label.pricing.profile"].create({
-                "name": "VIP2",
-                "code": "vip2",
-                "is_default": False,
-                "is_vip": True,
-                "sequence": 30,
-            })
+            cls.profile_vip2 = cls.env["label.pricing.profile"].create(
+                {
+                    "name": "VIP2",
+                    "code": "vip2",
+                    "is_default": False,
+                    "is_vip": True,
+                    "sequence": 30,
+                }
+            )
 
         # === Standard tiery ===
-        cls.tier_leath_30 = cls.env["label.production.tier"].create({
-            "name": "Do 30",
-            "group_id": cls.group_leatherette.id,
-            "pricing_profile_id": cls.profile_standard.id,
-            "min_quantity": 1,
-            "max_quantity": 29,
-            "pieces_per_hour": 80,
-            "margin_pct": 320,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 15,
-        })
+        cls.tier_leath_30 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 30",
+                "group_id": cls.group_leatherette.id,
+                "pricing_profile_id": cls.profile_standard.id,
+                "min_quantity": 1,
+                "max_quantity": 29,
+                "pieces_per_hour": 80,
+                "margin_pct": 320,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 15,
+            }
+        )
 
-        cls.tier_leath_100 = cls.env["label.production.tier"].create({
-            "name": "Do 100",
-            "group_id": cls.group_leatherette.id,
-            "pricing_profile_id": cls.profile_standard.id,
-            "min_quantity": 30,
-            "max_quantity": 99,
-            "pieces_per_hour": 90,
-            "margin_pct": 240,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 15,
-        })
+        cls.tier_leath_100 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 100",
+                "group_id": cls.group_leatherette.id,
+                "pricing_profile_id": cls.profile_standard.id,
+                "min_quantity": 30,
+                "max_quantity": 99,
+                "pieces_per_hour": 90,
+                "margin_pct": 240,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 15,
+            }
+        )
 
-        cls.tier_leath_500 = cls.env["label.production.tier"].create({
-            "name": "Do 500",
-            "group_id": cls.group_leatherette.id,
-            "pricing_profile_id": cls.profile_standard.id,
-            "min_quantity": 100,
-            "max_quantity": 499,
-            "pieces_per_hour": 100,
-            "margin_pct": 125,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 15,
-        })
+        cls.tier_leath_500 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 500",
+                "group_id": cls.group_leatherette.id,
+                "pricing_profile_id": cls.profile_standard.id,
+                "min_quantity": 100,
+                "max_quantity": 499,
+                "pieces_per_hour": 100,
+                "margin_pct": 125,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 15,
+            }
+        )
 
         # Standard satén tier
-        cls.tier_satin_200 = cls.env["label.production.tier"].create({
-            "name": "Do 200",
-            "group_id": cls.group_satin.id,
-            "pricing_profile_id": cls.profile_standard.id,
-            "min_quantity": 1,
-            "max_quantity": 199,
-            "pieces_per_hour": 800,
-            "margin_pct": 320,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 0,
-        })
+        cls.tier_satin_200 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 200",
+                "group_id": cls.group_satin.id,
+                "pricing_profile_id": cls.profile_standard.id,
+                "min_quantity": 1,
+                "max_quantity": 199,
+                "pieces_per_hour": 800,
+                "margin_pct": 320,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 0,
+            }
+        )
 
         # === VIP1 tiery – flat, better parameters ===
-        cls.tier_leath_vip1 = cls.env["label.production.tier"].create({
-            "name": "VIP1 koženka",
-            "group_id": cls.group_leatherette.id,
-            "pricing_profile_id": cls.profile_vip1.id,
-            "min_quantity": 0,
-            "max_quantity": 999999,
-            "pieces_per_hour": 120,
-            "margin_pct": 180,
-            "waste_test_percentage": 5,
-            "waste_pruning_percentage": 10,
-        })
+        cls.tier_leath_vip1 = cls.env["label.production.tier"].create(
+            {
+                "name": "VIP1 koženka",
+                "group_id": cls.group_leatherette.id,
+                "pricing_profile_id": cls.profile_vip1.id,
+                "min_quantity": 0,
+                "max_quantity": 999999,
+                "pieces_per_hour": 120,
+                "margin_pct": 180,
+                "waste_test_percentage": 5,
+                "waste_pruning_percentage": 10,
+            }
+        )
 
         # === VIP2 tiery – even better parameters ===
-        cls.tier_leath_vip2 = cls.env["label.production.tier"].create({
-            "name": "VIP2 koženka",
-            "group_id": cls.group_leatherette.id,
-            "pricing_profile_id": cls.profile_vip2.id,
-            "min_quantity": 0,
-            "max_quantity": 999999,
-            "pieces_per_hour": 150,
-            "margin_pct": 120,
-            "waste_test_percentage": 3,
-            "waste_pruning_percentage": 8,
-        })
+        cls.tier_leath_vip2 = cls.env["label.production.tier"].create(
+            {
+                "name": "VIP2 koženka",
+                "group_id": cls.group_leatherette.id,
+                "pricing_profile_id": cls.profile_vip2.id,
+                "min_quantity": 0,
+                "max_quantity": 999999,
+                "pieces_per_hour": 150,
+                "margin_pct": 120,
+                "waste_test_percentage": 3,
+                "waste_pruning_percentage": 8,
+            }
+        )
 
         cls.calc = cls.env["label.calculator"]
 
@@ -232,10 +273,12 @@ class TestVIPPricingProfiles(TransactionCase):
             limit=1,
         )
         if profit_account and loss_account:
-            cls.env["account.cash.rounding"].search([]).write({
-                "profit_account_id": profit_account.id,
-                "loss_account_id": loss_account.id,
-            })
+            cls.env["account.cash.rounding"].search([]).write(
+                {
+                    "profit_account_id": profit_account.id,
+                    "loss_account_id": loss_account.id,
+                }
+            )
 
     # ─────────────────────────────────────────────
     # TEST 35: Pricing profile model creation
@@ -273,12 +316,14 @@ class TestVIPPricingProfiles(TransactionCase):
         # Ensure there's a default profile already
         self.assertTrue(self.profile_standard.is_default)
         with self.assertRaises(ValidationError):
-            self.env["label.pricing.profile"].create({
-                "name": "Duplicate Default",
-                "code": "dup_default",
-                "is_default": True,
-                "is_vip": False,
-            })
+            self.env["label.pricing.profile"].create(
+                {
+                    "name": "Duplicate Default",
+                    "code": "dup_default",
+                    "is_default": True,
+                    "is_vip": False,
+                }
+            )
 
         _logger.info("TEST 36: single default constraint works ✅")
 
@@ -422,16 +467,19 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_41_partner_vip_discount_zero(self):
         """VIP zákazník má discount = 0."""
-        partner = self.env["res.partner"].create({
-            "name": "VIP Test Customer",
-            "label_is_vip": True,
-            "label_pricing_profile_id": self.profile_vip1.id,
-            "label_discount_override": 15,
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "VIP Test Customer",
+                "label_is_vip": True,
+                "label_pricing_profile_id": self.profile_vip1.id,
+                "label_discount_override": 15,
+            }
+        )
 
         # VIP customers always get 0 discount
         self.assertEqual(
-            partner.label_effective_discount, 0,
+            partner.label_effective_discount,
+            0,
             "VIP customer should have 0% discount",
         )
         self.assertTrue(partner.label_is_vip)
@@ -443,14 +491,17 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_42_non_vip_keeps_discount(self):
         """Non-VIP zákazník má normální slevu."""
-        partner = self.env["res.partner"].create({
-            "name": "Standard Customer",
-            "label_is_vip": False,
-            "label_discount_override": 10,
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Standard Customer",
+                "label_is_vip": False,
+                "label_discount_override": 10,
+            }
+        )
 
         self.assertEqual(
-            partner.label_effective_discount, 10,
+            partner.label_effective_discount,
+            10,
             "Non-VIP customer should keep discount override",
         )
 
@@ -461,33 +512,41 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_43_vip_so_line_discount_zero(self):
         """VIP zákazník na SO lince má discount = 0."""
-        partner = self.env["res.partner"].create({
-            "name": "VIP SO Customer",
-            "label_is_vip": True,
-            "label_pricing_profile_id": self.profile_vip1.id,
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "VIP SO Customer",
+                "label_is_vip": True,
+                "label_pricing_profile_id": self.profile_vip1.id,
+            }
+        )
 
-        product = self.env["product.template"].create({
-            "name": "Test Štítek",
-            "type": "consu",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "label_default_material_id": self.mat_leatherette.id,
-            "list_price": 0,
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Štítek",
+                "type": "consu",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "label_default_material_id": self.mat_leatherette.id,
+                "list_price": 0,
+            }
+        )
 
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
 
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 10,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 10,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         # VIP customer should have price calculated with VIP1 profile
         self.assertTrue(
@@ -509,32 +568,40 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_44_standard_so_line_works(self):
         """Standard zákazník na SO lince funguje beze změn."""
-        partner = self.env["res.partner"].create({
-            "name": "Standard SO Customer",
-            "label_is_vip": False,
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Standard SO Customer",
+                "label_is_vip": False,
+            }
+        )
 
-        product = self.env["product.template"].create({
-            "name": "Test Štítek Standard",
-            "type": "consu",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "label_default_material_id": self.mat_leatherette.id,
-            "list_price": 0,
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Štítek Standard",
+                "type": "consu",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "label_default_material_id": self.mat_leatherette.id,
+                "list_price": 0,
+            }
+        )
 
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
 
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 10,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 10,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         self.assertTrue(
             line.label_calculated_price > 0,
@@ -553,10 +620,12 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_45_vip_eligibility_not_enough_invoices(self):
         """Zákazník s méně než 3 fakturami nemá nárok na VIP."""
-        partner = self.env["res.partner"].create({
-            "name": "New Customer",
-            "label_is_vip": False,
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "New Customer",
+                "label_is_vip": False,
+            }
+        )
 
         partner._compute_label_vip_eligible()
         self.assertFalse(
@@ -633,24 +702,32 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_48_profile_display_on_so(self):
         """VIP badge se zobrazí na nabídce."""
-        vip_partner = self.env["res.partner"].create({
-            "name": "VIP Display Customer",
-            "label_is_vip": True,
-            "label_pricing_profile_id": self.profile_vip1.id,
-        })
+        vip_partner = self.env["res.partner"].create(
+            {
+                "name": "VIP Display Customer",
+                "label_is_vip": True,
+                "label_pricing_profile_id": self.profile_vip1.id,
+            }
+        )
 
-        std_partner = self.env["res.partner"].create({
-            "name": "Standard Display Customer",
-            "label_is_vip": False,
-        })
+        std_partner = self.env["res.partner"].create(
+            {
+                "name": "Standard Display Customer",
+                "label_is_vip": False,
+            }
+        )
 
-        vip_order = self.env["sale.order"].create({
-            "partner_id": vip_partner.id,
-        })
+        vip_order = self.env["sale.order"].create(
+            {
+                "partner_id": vip_partner.id,
+            }
+        )
 
-        std_order = self.env["sale.order"].create({
-            "partner_id": std_partner.id,
-        })
+        std_order = self.env["sale.order"].create(
+            {
+                "partner_id": std_partner.id,
+            }
+        )
 
         self.assertIn("VIP1", vip_order.label_pricing_profile_display)
         self.assertFalse(std_order.label_pricing_profile_display)
@@ -666,27 +743,35 @@ class TestVIPPricingProfiles(TransactionCase):
     # ─────────────────────────────────────────────
     def test_49_profile_display_on_invoice(self):
         """VIP badge se zobrazí na faktuře."""
-        vip_partner = self.env["res.partner"].create({
-            "name": "VIP Invoice Customer",
-            "label_is_vip": True,
-            "label_pricing_profile_id": self.profile_vip2.id,
-        })
+        vip_partner = self.env["res.partner"].create(
+            {
+                "name": "VIP Invoice Customer",
+                "label_is_vip": True,
+                "label_pricing_profile_id": self.profile_vip2.id,
+            }
+        )
 
-        std_partner = self.env["res.partner"].create({
-            "name": "Standard Invoice Customer",
-            "label_is_vip": False,
-        })
+        std_partner = self.env["res.partner"].create(
+            {
+                "name": "Standard Invoice Customer",
+                "label_is_vip": False,
+            }
+        )
 
         # Create minimal invoices
-        vip_invoice = self.env["account.move"].create({
-            "partner_id": vip_partner.id,
-            "move_type": "out_invoice",
-        })
+        vip_invoice = self.env["account.move"].create(
+            {
+                "partner_id": vip_partner.id,
+                "move_type": "out_invoice",
+            }
+        )
 
-        std_invoice = self.env["account.move"].create({
-            "partner_id": std_partner.id,
-            "move_type": "out_invoice",
-        })
+        std_invoice = self.env["account.move"].create(
+            {
+                "partner_id": std_partner.id,
+                "move_type": "out_invoice",
+            }
+        )
 
         self.assertIn("VIP2", vip_invoice.label_pricing_profile_display)
         self.assertFalse(std_invoice.label_pricing_profile_display)

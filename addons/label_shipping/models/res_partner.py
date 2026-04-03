@@ -17,8 +17,7 @@ class ResPartner(models.Model):
     label_carrier_service_code = fields.Char(
         string="Kód služby dopravce",
         help=(
-            "Kód služby dopravce. Pro Packeta HD: ID přepravce."
-            " Pro DPD: kód služby."
+            "Kód služby dopravce. Pro Packeta HD: ID přepravce." " Pro DPD: kód služby."
         ),
     )
     label_pickup_point_id = fields.Char(

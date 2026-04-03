@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 
 
 class LabelProductionTier(models.Model):
@@ -25,7 +25,8 @@ class LabelProductionTier(models.Model):
 
     min_quantity = fields.Integer(string="Od (ks)", required=True)
     max_quantity = fields.Integer(
-        string="Do (ks)", required=True,
+        string="Do (ks)",
+        required=True,
         help="Zadej 999999 pro neomezeně",
     )
 
@@ -33,14 +34,13 @@ class LabelProductionTier(models.Model):
         string="Výkon (ks/hod)",
         required=True,
         help="Celkový výkon zahrnující VŠECHNY kroky výroby "
-             "(tisk, press, postprocess, zatloukání nýtů...)",
+        "(tisk, press, postprocess, zatloukání nýtů...)",
     )
 
     margin_pct = fields.Float(
         string="Marže (%)",
         digits=(5, 2),
-        help="Marže pro tuto hladinu. "
-             "Pokud 0, použije se výchozí marže ze skupiny.",
+        help="Marže pro tuto hladinu. " "Pokud 0, použije se výchozí marže ze skupiny.",
     )
 
     waste_test_pieces = fields.Integer(

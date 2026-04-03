@@ -11,14 +11,12 @@
           <group>
             <group string="VIP status">
               <field name="label_is_vip"/>
-              <field name="label_pricing_profile_id"
-                     invisible="not label_is_vip"
-                     domain="[('is_vip', '=', True)]"/>
+              <field name="label_pricing_profile_id" invisible="not label_is_vip" domain="[('is_vip', '=', True)]"/>
               <div invisible="not label_vip_eligible or label_is_vip" class="text-warning fw-bold">
                 ⭐ Nárok na VIP
               </div>
               <div invisible="not label_is_vip" class="text-success fw-bold">
-                ⭐ <field name="label_pricing_profile_id" widget="text" readonly="1" nolabel="1" class="d-inline"/>
+                ⭐                <field name="label_pricing_profile_id" readonly="1" nolabel="1" class="d-inline"/>
               </div>
               <field name="label_vip_eligible" invisible="1"/>
             </group>

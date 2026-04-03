@@ -1,8 +1,9 @@
-from odoo import models, fields, api
 import base64
 import io
-import re
 import logging
+import re
+
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -81,10 +82,7 @@ class AccountMove(models.Model):
                 company_partner = self.env.company.partner_id
                 bank = company_partner.bank_ids.filtered(
                     lambda b: b.currency_id == currency
-                    or (
-                        not b.currency_id
-                        and currency == self.env.company.currency_id
-                    )
+                    or (not b.currency_id and currency == self.env.company.currency_id)
                 )[:1]
                 if not bank:
                     bank = company_partner.bank_ids[:1]
@@ -165,17 +163,17 @@ class AccountMove(models.Model):
 
         # EPC QR format (newline-separated)
         lines = [
-            "BCD",       # Service Tag
-            "002",       # Version
-            "1",         # Character set (UTF-8)
-            "SCT",       # Identification code
-            bic,         # BIC of beneficiary bank (may be empty)
-            beneficiary, # Beneficiary name
-            iban,        # IBAN
-            amount,      # Amount (EUR + value)
-            "",          # Purpose (empty)
-            "",          # Remittance reference (empty)
-            msg,         # Remittance text
+            "BCD",  # Service Tag
+            "002",  # Version
+            "1",  # Character set (UTF-8)
+            "SCT",  # Identification code
+            bic,  # BIC of beneficiary bank (may be empty)
+            beneficiary,  # Beneficiary name
+            iban,  # IBAN
+            amount,  # Amount (EUR + value)
+            "",  # Purpose (empty)
+            "",  # Remittance reference (empty)
+            msg,  # Remittance text
         ]
         return "\n".join(lines)
 

@@ -1,5 +1,6 @@
-from odoo import models, fields, api
 from datetime import timedelta
+
+from odoo import api, fields, models
 
 
 class SaleOrder(models.Model):
@@ -71,9 +72,7 @@ class SaleOrder(models.Model):
             "res_model": "sale.order.line",
             "view_mode": "list",
             "views": [
-                (self.env.ref(
-                    "label_calculator.view_label_history_list"
-                ).id, "list"),
+                (self.env.ref("label_calculator.view_label_history_list").id, "list"),
             ],
             "domain": domain,
             "context": {

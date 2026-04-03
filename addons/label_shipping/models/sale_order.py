@@ -54,8 +54,7 @@ class SaleOrder(models.Model):
                 "default_sale_order_id": self.id,
                 "default_carrier_type": carrier,
                 "default_carrier_service_code": (
-                    self.partner_shipping_id.label_carrier_service_code
-                    or ""
+                    self.partner_shipping_id.label_carrier_service_code or ""
                 ),
                 "default_pickup_point_id": (
                     self.partner_shipping_id.label_pickup_point_id or ""

@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -67,10 +67,12 @@ class LabelPricingProfile(models.Model):
         """Zajistí, že existuje maximálně jeden výchozí profil."""
         for profile in self:
             if profile.is_default:
-                other_default = self.search([
-                    ("is_default", "=", True),
-                    ("id", "!=", profile.id),
-                ])
+                other_default = self.search(
+                    [
+                        ("is_default", "=", True),
+                        ("id", "!=", profile.id),
+                    ]
+                )
                 if other_default:
                     raise ValidationError(
                         "Může existovat pouze jeden výchozí cenový profil. "
