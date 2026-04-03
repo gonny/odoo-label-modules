@@ -12,13 +12,12 @@ Environment variables (optional):
     ODOO_PASSWORD – Password        (default: admin)
 """
 
-import sys
 import os
+import sys
 
 # Allow importing odoo_rpc from the same directory
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from odoo_rpc import OdooRPC  # noqa: E402
-
 
 # ---------------------------------------------------------------------------
 # Test runner helpers
@@ -51,13 +50,13 @@ def run(rpc):
     print("\n── Seed data ──")
 
     groups = rpc.search_read(
-        "label.material.group", [], ["name"],
+        "label.material.group",
+        [],
+        ["name"],
     )
     group_names = [g["name"] for g in groups]
-    check("Material groups exist", len(groups) >= 5,
-          f"found {len(groups)}")
-    for expected in ["Koženka Royal", "Satén", "TTR pásky",
-                     "Heat press", "Komponenty"]:
+    check("Material groups exist", len(groups) >= 5, f"found {len(groups)}")
+    for expected in ["Koženka Royal", "Satén", "TTR pásky", "Heat press", "Komponenty"]:
         check(f"Group '{expected}' present", expected in group_names)
 
     products = rpc.search_read(
@@ -66,18 +65,15 @@ def run(rpc):
         ["name"],
     )
     product_names = [p["name"] for p in products]
-    check("Calculator products exist", len(products) >= 2,
-          f"found {len(products)}")
+    check("Calculator products exist", len(products) >= 2, f"found {len(products)}")
     for expected in ["Gravírovaný štítek", "Textilní etiketa"]:
         check(f"Product '{expected}' present", expected in product_names)
 
     machines = rpc.search_read("label.machine", [], ["name"])
-    check("Machines exist", len(machines) >= 2,
-          f"found {len(machines)}")
+    check("Machines exist", len(machines) >= 2, f"found {len(machines)}")
 
     tiers = rpc.search_read("label.production.tier", [], ["name"])
-    check("Production tiers exist", len(tiers) >= 6,
-          f"found {len(tiers)}")
+    check("Production tiers exist", len(tiers) >= 6, f"found {len(tiers)}")
 
     # ── 2. Create a customer ──────────────────────────────────────────
     print("\n── Customer ──")
@@ -88,12 +84,14 @@ def run(rpc):
         rpc.write("res.partner", existing, {"active": True})
         partner_id = existing[0]
     else:
-        partner_id = rpc.create("res.partner", {
-            "name": partner_name,
-            "email": "smoke@test.local",
-        })
-    check("Customer created/found", partner_id,
-          f"id={partner_id}")
+        partner_id = rpc.create(
+            "res.partner",
+            {
+                "name": partner_name,
+                "email": "smoke@test.local",
+            },
+        )
+    check("Customer created/found", partner_id, f"id={partner_id}")
 
     # ── 3. Create a sale order with calculator product ────────────────
     print("\n── Sale order ──")
@@ -108,57 +106,72 @@ def run(rpc):
     product_id = product_ids[0]
 
     # Find default material
-    tmpl_full = rpc.read("product.template", [tmpl["id"]],
-                         ["label_default_material_id"])[0]
+    tmpl_full = rpc.read(
+        "product.template", [tmpl["id"]], ["label_default_material_id"]
+    )[0]
     # XML-RPC returns Many2one fields as [id, name] tuples (or False)
     mat_id = tmpl_full["label_default_material_id"]
     if isinstance(mat_id, (list, tuple)):
         mat_id = mat_id[0]
     check("Default material found", mat_id, f"id={mat_id}")
 
-    order_id = rpc.create_sale_order(partner_id, lines=[{
-        "product_id": product_id,
-        "product_template_id": tmpl["id"],
-        "label_material_id": mat_id,
-        "label_width_mm": 30,
-        "label_height_mm": 40,
-        "product_uom_qty": 100,
-    }])
+    order_id = rpc.create_sale_order(
+        partner_id,
+        lines=[
+            {
+                "product_id": product_id,
+                "product_template_id": tmpl["id"],
+                "label_material_id": mat_id,
+                "label_width_mm": 30,
+                "label_height_mm": 40,
+                "product_uom_qty": 100,
+            }
+        ],
+    )
     check("Sale order created", order_id, f"id={order_id}")
 
-    order = rpc.read("sale.order", [order_id],
-                     ["name", "state", "amount_total"])[0]
-    check("Order is in draft", order["state"] == "draft",
-          f"state={order['state']}")
+    order = rpc.read("sale.order", [order_id], ["name", "state", "amount_total"])[0]
+    check("Order is in draft", order["state"] == "draft", f"state={order['state']}")
 
     # ── 4. Verify price calculation ───────────────────────────────────
     print("\n── Price calculation ──")
 
-    sol_ids = rpc.search("sale.order.line",
-                         [("order_id", "=", order_id)])
+    sol_ids = rpc.search("sale.order.line", [("order_id", "=", order_id)])
     check("Order line exists", len(sol_ids) > 0)
 
-    line = rpc.read("sale.order.line", sol_ids, [
-        "price_unit", "label_calculated_price",
-        "label_material_cost_only", "label_price_breakdown",
-    ])[0]
-    check("Price > 0", line["price_unit"] > 0,
-          f"price_unit={line['price_unit']}")
-    check("Calculated price > 0", line["label_calculated_price"] > 0,
-          f"calc={line['label_calculated_price']}")
-    check("Material cost > 0", line["label_material_cost_only"] > 0,
-          f"cost={line['label_material_cost_only']}")
-    check("Breakdown populated",
-          bool(line["label_price_breakdown"]),
-          f"len={len(line['label_price_breakdown'] or '')}")
+    line = rpc.read(
+        "sale.order.line",
+        sol_ids,
+        [
+            "price_unit",
+            "label_calculated_price",
+            "label_material_cost_only",
+            "label_price_breakdown",
+        ],
+    )[0]
+    check("Price > 0", line["price_unit"] > 0, f"price_unit={line['price_unit']}")
+    check(
+        "Calculated price > 0",
+        line["label_calculated_price"] > 0,
+        f"calc={line['label_calculated_price']}",
+    )
+    check(
+        "Material cost > 0",
+        line["label_material_cost_only"] > 0,
+        f"cost={line['label_material_cost_only']}",
+    )
+    check(
+        "Breakdown populated",
+        bool(line["label_price_breakdown"]),
+        f"len={len(line['label_price_breakdown'] or '')}",
+    )
 
     # ── 5. Confirm order ──────────────────────────────────────────────
     print("\n── Confirm order ──")
 
     rpc.confirm_sale_order(order_id)
     order = rpc.read("sale.order", [order_id], ["state"])[0]
-    check("Order confirmed", order["state"] == "sale",
-          f"state={order['state']}")
+    check("Order confirmed", order["state"] == "sale", f"state={order['state']}")
 
     # ── 6. Create invoice ─────────────────────────────────────────────
     print("\n── Invoice ──")
@@ -167,12 +180,19 @@ def run(rpc):
     check("Invoice created", inv_id, f"id={inv_id}")
 
     if inv_id:
-        inv = rpc.read("account.move", [inv_id], [
-            "name", "state", "amount_total",
-            "label_variable_symbol",
-        ])[0]
-        check("Invoice total > 0", inv["amount_total"] > 0,
-              f"total={inv['amount_total']}")
+        inv = rpc.read(
+            "account.move",
+            [inv_id],
+            [
+                "name",
+                "state",
+                "amount_total",
+                "label_variable_symbol",
+            ],
+        )[0]
+        check(
+            "Invoice total > 0", inv["amount_total"] > 0, f"total={inv['amount_total']}"
+        )
 
         # Variable symbol may only appear after posting
         vs = inv.get("label_variable_symbol", "")
@@ -181,17 +201,22 @@ def run(rpc):
         # Read invoice lines for material info
         inv_line_ids = rpc.search(
             "account.move.line",
-            [("move_id", "=", inv_id),
-             ("display_type", "=", "product")],
+            [("move_id", "=", inv_id), ("display_type", "=", "product")],
         )
         if inv_line_ids:
-            inv_line = rpc.read("account.move.line", inv_line_ids[:1], [
-                "label_material_id", "label_price_breakdown",
-            ])[0]
-            check("Invoice line has material",
-                  bool(inv_line.get("label_material_id")))
-            check("Invoice line has breakdown",
-                  bool(inv_line.get("label_price_breakdown")))
+            inv_line = rpc.read(
+                "account.move.line",
+                inv_line_ids[:1],
+                [
+                    "label_material_id",
+                    "label_price_breakdown",
+                ],
+            )[0]
+            check("Invoice line has material", bool(inv_line.get("label_material_id")))
+            check(
+                "Invoice line has breakdown",
+                bool(inv_line.get("label_price_breakdown")),
+            )
 
 
 # ---------------------------------------------------------------------------
