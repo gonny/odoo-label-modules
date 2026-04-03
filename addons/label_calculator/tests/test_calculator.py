@@ -15,207 +15,245 @@ class TestLabelCalculator(TransactionCase):
         ICP = cls.env["ir.config_parameter"].sudo()
 
         # === Nastavení – výchozí pro testy ===
-        settings = cls.env["res.config.settings"].create({
-            "label_hourly_rate": 810,
-            "label_admin_overhead_enabled": False,
-            "label_admin_overhead_minutes": 15,
-            "label_amortization_enabled": True,
-            "label_fixed_costs_enabled": True,
-            "label_fixed_rent_yearly": 7000,
-            "label_fixed_energy_yearly": 27000,
-            "label_fixed_other_yearly": 0,
-            "label_working_hours_yearly": 2000,
-            "label_vat_surcharge_pct": 15,
-            "label_default_material_margin_pct": 30,
-            "label_min_order_price": 250,
-            "label_min_order_quantity": 50,
-        })
+        settings = cls.env["res.config.settings"].create(
+            {
+                "label_hourly_rate": 810,
+                "label_admin_overhead_enabled": False,
+                "label_admin_overhead_minutes": 15,
+                "label_amortization_enabled": True,
+                "label_fixed_costs_enabled": True,
+                "label_fixed_rent_yearly": 7000,
+                "label_fixed_energy_yearly": 27000,
+                "label_fixed_other_yearly": 0,
+                "label_working_hours_yearly": 2000,
+                "label_vat_surcharge_pct": 15,
+                "label_default_material_margin_pct": 30,
+                "label_min_order_price": 250,
+                "label_min_order_quantity": 50,
+            }
+        )
         settings.set_values()
 
         # === Stroje ===
-        cls.machine_laser = cls.env["label.machine"].create({
-            "name": "Laser CO2",
-            "purchase_price": 1000000,
-            "lifetime_years": 15,
-            "working_days_per_week": "5",
-            "hours_per_day": 5,
-            "weeks_per_year": 44,
-        })
+        cls.machine_laser = cls.env["label.machine"].create(
+            {
+                "name": "Laser CO2",
+                "purchase_price": 1000000,
+                "lifetime_years": 15,
+                "working_days_per_week": "5",
+                "hours_per_day": 5,
+                "weeks_per_year": 44,
+            }
+        )
 
-        cls.machine_printer = cls.env["label.machine"].create({
-            "name": "Tiskárna etiket",
-            "purchase_price": 80000,
-            "lifetime_years": 5,
-            "working_days_per_week": "5",
-            "hours_per_day": 4,
-            "weeks_per_year": 44,
-        })
+        cls.machine_printer = cls.env["label.machine"].create(
+            {
+                "name": "Tiskárna etiket",
+                "purchase_price": 80000,
+                "lifetime_years": 5,
+                "working_days_per_week": "5",
+                "hours_per_day": 4,
+                "weeks_per_year": 44,
+            }
+        )
 
-        cls.machine_heat_press = cls.env["label.machine"].create({
-            "name": "Heat press",
-            "purchase_price": 65000,
-            "lifetime_years": 8,
-            "working_days_per_week": "5",
-            "hours_per_day": 1,
-            "weeks_per_year": 44,
-        })
+        cls.machine_heat_press = cls.env["label.machine"].create(
+            {
+                "name": "Heat press",
+                "purchase_price": 65000,
+                "lifetime_years": 8,
+                "working_days_per_week": "5",
+                "hours_per_day": 1,
+                "weeks_per_year": 44,
+            }
+        )
 
         # === Skupiny ===
-        cls.group_leatherette = cls.env["label.material.group"].create({
-            "name": "Koženka Royal",
-            "material_type": "area",
-            "is_addon": False,
-            "default_margin_pct": 35,
-            "machine_id": cls.machine_laser.id,
-        })
+        cls.group_leatherette = cls.env["label.material.group"].create(
+            {
+                "name": "Koženka Royal",
+                "material_type": "area",
+                "is_addon": False,
+                "default_margin_pct": 35,
+                "machine_id": cls.machine_laser.id,
+            }
+        )
 
-        cls.group_satin = cls.env["label.material.group"].create({
-            "name": "Satén",
-            "material_type": "length",
-            "is_addon": False,
-            "default_margin_pct": 25,
-            "machine_id": cls.machine_printer.id,
-        })
+        cls.group_satin = cls.env["label.material.group"].create(
+            {
+                "name": "Satén",
+                "material_type": "length",
+                "is_addon": False,
+                "default_margin_pct": 25,
+                "machine_id": cls.machine_printer.id,
+            }
+        )
 
-        cls.group_ttr = cls.env["label.material.group"].create({
-            "name": "TTR pásky",
-            "material_type": "length",
-            "is_addon": True,
-            "default_margin_pct": 20,
-        })
+        cls.group_ttr = cls.env["label.material.group"].create(
+            {
+                "name": "TTR pásky",
+                "material_type": "length",
+                "is_addon": True,
+                "default_margin_pct": 20,
+            }
+        )
 
-        cls.group_heat_press = cls.env["label.material.group"].create({
-            "name": "Heat press",
-            "material_type": "time",
-            "is_addon": True,
-            "machine_id": cls.machine_heat_press.id,
-        })
+        cls.group_heat_press = cls.env["label.material.group"].create(
+            {
+                "name": "Heat press",
+                "material_type": "time",
+                "is_addon": True,
+                "machine_id": cls.machine_heat_press.id,
+            }
+        )
 
-        cls.group_components = cls.env["label.material.group"].create({
-            "name": "Komponenty",
-            "material_type": "pieces",
-            "is_addon": True,
-            "default_margin_pct": 40,
-        })
+        cls.group_components = cls.env["label.material.group"].create(
+            {
+                "name": "Komponenty",
+                "material_type": "pieces",
+                "is_addon": True,
+                "default_margin_pct": 40,
+            }
+        )
 
         # === Materiály ===
 
         # Koženka – area, cena S DPH
-        cls.mat_leatherette = cls.env["label.material"].create({
-            "name": "Černo / stříbrná",
-            "group_id": cls.group_leatherette.id,
-            "color_name": "Přírodní stříbrná",
-            "purchase_price": 310,
-            "purchase_vat_included": True,
-            "purchase_vat_pct": 21,
-            "sheet_width_mm": 600,
-            "sheet_height_mm": 300,
-            "thickness_mm": 0.8,
-        })
+        cls.mat_leatherette = cls.env["label.material"].create(
+            {
+                "name": "Černo / stříbrná",
+                "group_id": cls.group_leatherette.id,
+                "color_name": "Přírodní stříbrná",
+                "purchase_price": 310,
+                "purchase_vat_included": True,
+                "purchase_vat_pct": 21,
+                "sheet_width_mm": 600,
+                "sheet_height_mm": 300,
+                "thickness_mm": 0.8,
+            }
+        )
 
         # Satén – length, cena BEZ DPH
-        cls.mat_satin_20 = cls.env["label.material"].create({
-            "name": "Bílá 20mm",
-            "group_id": cls.group_satin.id,
-            "color_name": "Bílý",
-            "purchase_price": 509,
-            "purchase_vat_included": False,
-            "purchase_vat_pct": 21,
-            "roll_width_mm": 20,
-            "roll_length_m": 200,
-        })
+        cls.mat_satin_20 = cls.env["label.material"].create(
+            {
+                "name": "Bílá 20mm",
+                "group_id": cls.group_satin.id,
+                "color_name": "Bílý",
+                "purchase_price": 509,
+                "purchase_vat_included": False,
+                "purchase_vat_pct": 21,
+                "roll_width_mm": 20,
+                "roll_length_m": 200,
+            }
+        )
 
         # TTR – length, cena BEZ DPH
-        cls.mat_ttr_silver = cls.env["label.material"].create({
-            "name": "Stříbrná textilní",
-            "group_id": cls.group_ttr.id,
-            "color_name": "Stříbrná",
-            "purchase_price": 441,
-            "purchase_vat_included": False,
-            "purchase_vat_pct": 21,
-            "roll_width_mm": 69,
-            "roll_length_m": 200,
-        })
+        cls.mat_ttr_silver = cls.env["label.material"].create(
+            {
+                "name": "Stříbrná textilní",
+                "group_id": cls.group_ttr.id,
+                "color_name": "Stříbrná",
+                "purchase_price": 441,
+                "purchase_vat_included": False,
+                "purchase_vat_pct": 21,
+                "roll_width_mm": 69,
+                "roll_length_m": 200,
+            }
+        )
 
         # Heat press – time
-        cls.mat_heat_40s = cls.env["label.material"].create({
-            "name": "40s ×1",
-            "group_id": cls.group_heat_press.id,
-            "time_seconds": 40,
-            "time_multiplier": 1,
-        })
+        cls.mat_heat_40s = cls.env["label.material"].create(
+            {
+                "name": "40s ×1",
+                "group_id": cls.group_heat_press.id,
+                "time_seconds": 40,
+                "time_multiplier": 1,
+            }
+        )
 
         # Komponenty – pieces
-        cls.mat_rivet = cls.env["label.material"].create({
-            "name": "Nýt mosazný",
-            "group_id": cls.group_components.id,
-            "color_name": "Mosaz",
-            "component_price": 1.20,
-        })
+        cls.mat_rivet = cls.env["label.material"].create(
+            {
+                "name": "Nýt mosazný",
+                "group_id": cls.group_components.id,
+                "color_name": "Mosaz",
+                "component_price": 1.20,
+            }
+        )
 
         # === Tiery ===
 
         # Koženka
-        cls.tier_leath_30 = cls.env["label.production.tier"].create({
-            "name": "Do 30",
-            "group_id": cls.group_leatherette.id,
-            "min_quantity": 1,
-            "max_quantity": 29,
-            "pieces_per_hour": 80,
-            "margin_pct": 320,
-            "waste_test_pieces": 0,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 15,
-        })
+        cls.tier_leath_30 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 30",
+                "group_id": cls.group_leatherette.id,
+                "min_quantity": 1,
+                "max_quantity": 29,
+                "pieces_per_hour": 80,
+                "margin_pct": 320,
+                "waste_test_pieces": 0,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 15,
+            }
+        )
 
-        cls.tier_leath_100 = cls.env["label.production.tier"].create({
-            "name": "Do 100",
-            "group_id": cls.group_leatherette.id,
-            "min_quantity": 30,
-            "max_quantity": 99,
-            "pieces_per_hour": 90,
-            "margin_pct": 240,
-            "waste_test_pieces": 0,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 15,
-        })
+        cls.tier_leath_100 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 100",
+                "group_id": cls.group_leatherette.id,
+                "min_quantity": 30,
+                "max_quantity": 99,
+                "pieces_per_hour": 90,
+                "margin_pct": 240,
+                "waste_test_pieces": 0,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 15,
+            }
+        )
 
-        cls.tier_leath_500 = cls.env["label.production.tier"].create({
-            "name": "Do 500",
-            "group_id": cls.group_leatherette.id,
-            "min_quantity": 100,
-            "max_quantity": 499,
-            "pieces_per_hour": 100,
-            "margin_pct": 125,
-            "waste_test_pieces": 0,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 15,
-        })
+        cls.tier_leath_500 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 500",
+                "group_id": cls.group_leatherette.id,
+                "min_quantity": 100,
+                "max_quantity": 499,
+                "pieces_per_hour": 100,
+                "margin_pct": 125,
+                "waste_test_pieces": 0,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 15,
+            }
+        )
 
         # Satén
-        cls.tier_satin_200 = cls.env["label.production.tier"].create({
-            "name": "Do 200",
-            "group_id": cls.group_satin.id,
-            "min_quantity": 1,
-            "max_quantity": 199,
-            "pieces_per_hour": 800,
-            "margin_pct": 320,
-            "waste_test_pieces": 0,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 0,
-        })
+        cls.tier_satin_200 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 200",
+                "group_id": cls.group_satin.id,
+                "min_quantity": 1,
+                "max_quantity": 199,
+                "pieces_per_hour": 800,
+                "margin_pct": 320,
+                "waste_test_pieces": 0,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 0,
+            }
+        )
 
-        cls.tier_satin_1000 = cls.env["label.production.tier"].create({
-            "name": "Do 1000",
-            "group_id": cls.group_satin.id,
-            "min_quantity": 200,
-            "max_quantity": 999,
-            "pieces_per_hour": 800,
-            "margin_pct": 260,
-            "waste_test_pieces": 0,
-            "waste_test_percentage": 10,
-            "waste_pruning_percentage": 0,
-        })
+        cls.tier_satin_1000 = cls.env["label.production.tier"].create(
+            {
+                "name": "Do 1000",
+                "group_id": cls.group_satin.id,
+                "min_quantity": 200,
+                "max_quantity": 999,
+                "pieces_per_hour": 800,
+                "margin_pct": 260,
+                "waste_test_pieces": 0,
+                "waste_test_percentage": 10,
+                "waste_pruning_percentage": 0,
+            }
+        )
 
         # Kalkulátor
         cls.calc = cls.env["label.calculator"]
@@ -239,10 +277,12 @@ class TestLabelCalculator(TransactionCase):
             limit=1,
         )
         if profit_account and loss_account:
-            cls.env["account.cash.rounding"].search([]).write({
-                "profit_account_id": profit_account.id,
-                "loss_account_id": loss_account.id,
-            })
+            cls.env["account.cash.rounding"].search([]).write(
+                {
+                    "profit_account_id": profit_account.id,
+                    "loss_account_id": loss_account.id,
+                }
+            )
 
     # ─────────────────────────────────────────────
     # TEST 01: Základní výpočet – koženka area
@@ -270,18 +310,12 @@ class TestLabelCalculator(TransactionCase):
         self.assertTrue(default_tier)
 
         ICP = self.env["ir.config_parameter"].sudo()
-        self.assertAlmostEqual(
-            float(ICP.get_param("label_calc.hourly_rate")), 810.0
-        )
+        self.assertAlmostEqual(float(ICP.get_param("label_calc.hourly_rate")), 810.0)
         self.assertEqual(
             str(ICP.get_param("label_calc.admin_overhead_enabled")), "False"
         )
-        self.assertEqual(
-            str(ICP.get_param("label_calc.amortization_enabled")), "True"
-        )
-        self.assertEqual(
-            str(ICP.get_param("label_calc.fixed_costs_enabled")), "True"
-        )
+        self.assertEqual(str(ICP.get_param("label_calc.amortization_enabled")), "True")
+        self.assertEqual(str(ICP.get_param("label_calc.fixed_costs_enabled")), "True")
         self.assertAlmostEqual(
             float(ICP.get_param("label_calc.vat_surcharge_pct")), 15.0
         )
@@ -384,9 +418,7 @@ class TestLabelCalculator(TransactionCase):
 
         # Celkový náklad materiálu (satén + TTR bez marže)
         # 0.16101 + 0.13951 = 0.30052
-        self.assertAlmostEqual(
-            result["material_cost_only"], 0.30, places=1
-        )
+        self.assertAlmostEqual(result["material_cost_only"], 0.30, places=1)
 
         _logger.info(
             "TEST 03: Satén + TTR, 10 ks = %.2f Kč/ks (náklad mat: %.4f)",
@@ -401,15 +433,21 @@ class TestLabelCalculator(TransactionCase):
         """Ověření, že se vybere správný tier podle množství."""
         r10 = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
         r50 = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=50,
+            width_mm=30,
+            height_mm=20,
+            quantity=50,
         )
         r200 = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=200,
+            width_mm=30,
+            height_mm=20,
+            quantity=200,
         )
 
         self.assertEqual(r10["tier_name"], "Do 30")
@@ -422,7 +460,9 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 04: Tiery – 10ks=%.2f, 50ks=%.2f, 200ks=%.2f",
-            r10["unit_price"], r50["unit_price"], r200["unit_price"],
+            r10["unit_price"],
+            r50["unit_price"],
+            r200["unit_price"],
         )
 
     # ─────────────────────────────────────────────
@@ -432,7 +472,9 @@ class TestLabelCalculator(TransactionCase):
         """Ověření vzorce marže: 320% = × 4.2."""
         result = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         bd = result["breakdown"]["main"]
@@ -445,7 +487,9 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 05: Marže 320%% – náklad %.4f × 4.2 = %.4f (Odoo: %.4f)",
-            raw, expected_margin, with_margin,
+            raw,
+            expected_margin,
+            with_margin,
         )
 
     # ─────────────────────────────────────────────
@@ -455,7 +499,9 @@ class TestLabelCalculator(TransactionCase):
         """Ověření vzorce odpadů: dělení, ne násobení."""
         result = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         bd = result["breakdown"]["main"]
@@ -475,7 +521,10 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 06: Odpady – čistá %.4f × waste %.4f / 0.85 = %.4f (Odoo: %.4f)",
-            clean_cost, waste_mult, cost_with_tax, bd["material_cost_raw"],
+            clean_cost,
+            waste_mult,
+            cost_with_tax,
+            bd["material_cost_raw"],
         )
 
     # ─────────────────────────────────────────────
@@ -484,25 +533,29 @@ class TestLabelCalculator(TransactionCase):
     def test_07_vat_handling(self):
         """Ověření, že cena s/bez DPH dává stejný výsledek."""
         # Materiál se stejnou reálnou cenou, zadaný dvěma způsoby
-        mat_with_vat = self.env["label.material"].create({
-            "name": "Test S DPH",
-            "group_id": self.group_satin.id,
-            "purchase_price": 615.89,
-            "purchase_vat_included": True,
-            "purchase_vat_pct": 21,
-            "roll_width_mm": 20,
-            "roll_length_m": 200,
-        })
+        mat_with_vat = self.env["label.material"].create(
+            {
+                "name": "Test S DPH",
+                "group_id": self.group_satin.id,
+                "purchase_price": 615.89,
+                "purchase_vat_included": True,
+                "purchase_vat_pct": 21,
+                "roll_width_mm": 20,
+                "roll_length_m": 200,
+            }
+        )
 
-        mat_without_vat = self.env["label.material"].create({
-            "name": "Test BEZ DPH",
-            "group_id": self.group_satin.id,
-            "purchase_price": 509,
-            "purchase_vat_included": False,
-            "purchase_vat_pct": 21,
-            "roll_width_mm": 20,
-            "roll_length_m": 200,
-        })
+        mat_without_vat = self.env["label.material"].create(
+            {
+                "name": "Test BEZ DPH",
+                "group_id": self.group_satin.id,
+                "purchase_price": 509,
+                "purchase_vat_included": False,
+                "purchase_vat_pct": 21,
+                "roll_width_mm": 20,
+                "roll_length_m": 200,
+            }
+        )
 
         # Obě by měly mít stejnou purchase_price_incl_vat
         self.assertAlmostEqual(
@@ -513,18 +566,23 @@ class TestLabelCalculator(TransactionCase):
 
         r1 = self.calc.compute_price(
             material_id=mat_with_vat.id,
-            width_mm=20, height_mm=40, quantity=10,
+            width_mm=20,
+            height_mm=40,
+            quantity=10,
         )
         r2 = self.calc.compute_price(
             material_id=mat_without_vat.id,
-            width_mm=20, height_mm=40, quantity=10,
+            width_mm=20,
+            height_mm=40,
+            quantity=10,
         )
 
         self.assertAlmostEqual(r1["unit_price"], r2["unit_price"], places=1)
 
         _logger.info(
             "TEST 07: S DPH=%.2f, Bez DPH=%.2f (měly by být stejné)",
-            r1["unit_price"], r2["unit_price"],
+            r1["unit_price"],
+            r2["unit_price"],
         )
 
     # ─────────────────────────────────────────────
@@ -534,7 +592,9 @@ class TestLabelCalculator(TransactionCase):
         """Ověření zaokrouhlení na 10 haléřů nahoru."""
         result = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         raw = result.get("unit_price_raw", 0)
@@ -552,7 +612,8 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 08: Zaokrouhlení – surová %.4f → finální %.2f",
-            raw, final,
+            raw,
+            final,
         )
 
     # ─────────────────────────────────────────────
@@ -566,7 +627,9 @@ class TestLabelCalculator(TransactionCase):
         ICP.set_param("label_calc.admin_overhead_enabled", "False")
         r_off = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # ON
@@ -574,7 +637,9 @@ class TestLabelCalculator(TransactionCase):
         ICP.set_param("label_calc.admin_overhead_minutes", "1")
         r_on = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # S admin overhead musí být dražší
@@ -589,7 +654,8 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 09: Admin OFF=%.2f, ON=%.2f (rozdíl %.2f)",
-            r_off["unit_price"], r_on["unit_price"],
+            r_off["unit_price"],
+            r_on["unit_price"],
             r_on["unit_price"] - r_off["unit_price"],
         )
 
@@ -604,14 +670,18 @@ class TestLabelCalculator(TransactionCase):
         ICP.set_param("label_calc.amortization_enabled", "True")
         r_on = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # OFF
         ICP.set_param("label_calc.amortization_enabled", "False")
         r_off = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         self.assertGreater(r_on["unit_price"], r_off["unit_price"])
@@ -623,7 +693,8 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 10: Amort ON=%.2f, OFF=%.2f (rozdíl %.2f)",
-            r_on["unit_price"], r_off["unit_price"],
+            r_on["unit_price"],
+            r_off["unit_price"],
             r_on["unit_price"] - r_off["unit_price"],
         )
 
@@ -638,14 +709,18 @@ class TestLabelCalculator(TransactionCase):
         ICP.set_param("label_calc.fixed_costs_enabled", "True")
         r_on = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # OFF
         ICP.set_param("label_calc.fixed_costs_enabled", "False")
         r_off = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # S fixními náklady musí být dražší (vyšší hodinovka)
@@ -664,7 +739,8 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 11: Fixní ON=%.2f, OFF=%.2f",
-            r_on["unit_price"], r_off["unit_price"],
+            r_on["unit_price"],
+            r_off["unit_price"],
         )
 
     # ─────────────────────────────────────────────
@@ -672,23 +748,29 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_12_missing_tier(self):
         """Materiál bez tieru – vrátí chybu, ne crash."""
-        group_no_tier = self.env["label.material.group"].create({
-            "name": "Bez tieru",
-            "material_type": "area",
-            "is_addon": False,
-        })
-        mat_no_tier = self.env["label.material"].create({
-            "name": "Test bez tieru",
-            "group_id": group_no_tier.id,
-            "purchase_price": 100,
-            "purchase_vat_included": True,
-            "sheet_width_mm": 100,
-            "sheet_height_mm": 100,
-        })
+        group_no_tier = self.env["label.material.group"].create(
+            {
+                "name": "Bez tieru",
+                "material_type": "area",
+                "is_addon": False,
+            }
+        )
+        mat_no_tier = self.env["label.material"].create(
+            {
+                "name": "Test bez tieru",
+                "group_id": group_no_tier.id,
+                "purchase_price": 100,
+                "purchase_vat_included": True,
+                "sheet_width_mm": 100,
+                "sheet_height_mm": 100,
+            }
+        )
 
         result = self.calc.compute_price(
             material_id=mat_no_tier.id,
-            width_mm=10, height_mm=10, quantity=10,
+            width_mm=10,
+            height_mm=10,
+            quantity=10,
         )
 
         # Musí vrátit výsledek (ne crash)
@@ -711,14 +793,18 @@ class TestLabelCalculator(TransactionCase):
         ICP.set_param("label_calc.vat_surcharge_pct", "15")
         r_15 = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # Bez daně
         ICP.set_param("label_calc.vat_surcharge_pct", "0")
         r_0 = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         # Náklad materiálu s daní musí být vyšší
@@ -735,7 +821,9 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 13: Daň 15%%=%.4f, 0%%=%.4f, poměr=%.4f (očekáváno 1.1765)",
-            raw_15, raw_0, ratio,
+            raw_15,
+            raw_0,
+            ratio,
         )
 
     # ─────────────────────────────────────────────
@@ -745,12 +833,16 @@ class TestLabelCalculator(TransactionCase):
         """Opakovaný design – testovací odpad = 0%."""
         r_new = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
             is_repeat_design=False,
         )
         r_repeat = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
             is_repeat_design=True,
         )
 
@@ -777,7 +869,9 @@ class TestLabelCalculator(TransactionCase):
 
         result = self.calc.compute_price(
             material_id=self.mat_leatherette.id,
-            width_mm=30, height_mm=20, quantity=10,
+            width_mm=30,
+            height_mm=20,
+            quantity=10,
         )
 
         bd = result["breakdown"]["main"]
@@ -823,9 +917,7 @@ class TestLabelCalculator(TransactionCase):
         )
 
         # Excel: náklad satén + TTR = 0.301
-        self.assertAlmostEqual(
-            result["material_cost_only"], 0.30, places=1
-        )
+        self.assertAlmostEqual(result["material_cost_only"], 0.30, places=1)
 
         # Vrátit zpět
         ICP.set_param("label_calc.amortization_enabled", "True")
@@ -842,33 +934,41 @@ class TestLabelCalculator(TransactionCase):
     def test_17_invoice_flow(self):
         """Ověření celého flow: SO → Potvrzení → Faktura."""
         # Vytvoř produkt s kalkulačkou
-        product = self.env["product.template"].create({
-            "name": "Test Gravírovaný štítek",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Gravírovaný štítek",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
         # Vytvoř zákazníka
-        partner = self.env["res.partner"].create({
-            "name": "Test Zákazník",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test Zákazník",
+            }
+        )
 
         # Vytvoř objednávku
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
 
         # Přidej řádek
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 10,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 10,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         # Ověř, že se cena spočítala
         self.assertTrue(line.price_unit > 0)
@@ -904,32 +1004,40 @@ class TestLabelCalculator(TransactionCase):
             inv_line.label_material_cost_only,
         )
 
-      # ─────────────────────────────────────────────
+    # ─────────────────────────────────────────────
     # TEST 17: Zákaznické slevy – automatická hladina
     # ─────────────────────────────────────────────
     def test_17_discount_tier_auto(self):
         """Ověření automatického přiřazení slevové hladiny."""
         # Vytvoř slevové hladiny
-        tier_bronze = self.env["partner.discount.tier"].create({
-            "name": "Bronzový",
-            "min_spent": 5000,
-            "discount_pct": 5,
-        })
-        tier_silver = self.env["partner.discount.tier"].create({
-            "name": "Stříbrný",
-            "min_spent": 20000,
-            "discount_pct": 10,
-        })
-        tier_gold = self.env["partner.discount.tier"].create({
-            "name": "Zlatý",
-            "min_spent": 50000,
-            "discount_pct": 15,
-        })
+        tier_bronze = self.env["partner.discount.tier"].create(
+            {
+                "name": "Bronzový",
+                "min_spent": 5000,
+                "discount_pct": 5,
+            }
+        )
+        tier_silver = self.env["partner.discount.tier"].create(
+            {
+                "name": "Stříbrný",
+                "min_spent": 20000,
+                "discount_pct": 10,
+            }
+        )
+        tier_gold = self.env["partner.discount.tier"].create(
+            {
+                "name": "Zlatý",
+                "min_spent": 50000,
+                "discount_pct": 15,
+            }
+        )
 
         # Vytvoř zákazníka
-        partner = self.env["res.partner"].create({
-            "name": "Test Zákazník Slevy",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test Zákazník Slevy",
+            }
+        )
 
         # Bez útraty → žádná hladina
         partner._compute_label_discount_tier()
@@ -937,26 +1045,32 @@ class TestLabelCalculator(TransactionCase):
         self.assertEqual(partner.label_effective_discount, 0)
 
         # Vytvoř produkt
-        product = self.env["product.template"].create({
-            "name": "Test Gravírovaný štítek",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Gravírovaný štítek",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
         # Vytvoř objednávku za 6000 Kč → Bronze
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 100,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 100,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         # Potvrď objednávku
         order.action_confirm()
@@ -973,7 +1087,11 @@ class TestLabelCalculator(TransactionCase):
         _logger.info(
             "TEST 17: Útrata=%.2f, Hladina=%s, Sleva=%.1f%%",
             partner.label_total_invoiced,
-            partner.label_discount_tier_id.name if partner.label_discount_tier_id else "žádná",
+            (
+                partner.label_discount_tier_id.name
+                if partner.label_discount_tier_id
+                else "žádná"
+            ),
             partner.label_effective_discount,
         )
 
@@ -982,9 +1100,7 @@ class TestLabelCalculator(TransactionCase):
 
         # Pokud útrata >= 5000 → Bronze
         if partner.label_total_invoiced >= 5000:
-            self.assertEqual(
-                partner.label_discount_tier_id.id, tier_bronze.id
-            )
+            self.assertEqual(partner.label_discount_tier_id.id, tier_bronze.id)
             self.assertEqual(partner.label_effective_discount, 5)
         else:
             # Útrata < 5000 → žádná hladina
@@ -995,15 +1111,19 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_18_discount_manual_override(self):
         """Ruční sleva přetíží automatickou hladinu."""
-        tier_bronze = self.env["partner.discount.tier"].create({
-            "name": "Bronzový",
-            "min_spent": 0,
-            "discount_pct": 5,
-        })
+        tier_bronze = self.env["partner.discount.tier"].create(
+            {
+                "name": "Bronzový",
+                "min_spent": 0,
+                "discount_pct": 5,
+            }
+        )
 
-        partner = self.env["res.partner"].create({
-            "name": "Test Override",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test Override",
+            }
+        )
 
         # Automatická sleva = Bronze 5%
         partner._compute_label_discount_tier()
@@ -1027,48 +1147,62 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_19_discount_tier_ordering(self):
         """Ověření, že se vybere nejvyšší dosažená hladina."""
-        tier_bronze = self.env["partner.discount.tier"].create({
-            "name": "Bronzový",
-            "min_spent": 100,
-            "discount_pct": 5,
-        })
-        tier_silver = self.env["partner.discount.tier"].create({
-            "name": "Stříbrný",
-            "min_spent": 500,
-            "discount_pct": 10,
-        })
-        tier_gold = self.env["partner.discount.tier"].create({
-            "name": "Zlatý",
-            "min_spent": 5000,
-            "discount_pct": 15,
-        })
+        tier_bronze = self.env["partner.discount.tier"].create(
+            {
+                "name": "Bronzový",
+                "min_spent": 100,
+                "discount_pct": 5,
+            }
+        )
+        tier_silver = self.env["partner.discount.tier"].create(
+            {
+                "name": "Stříbrný",
+                "min_spent": 500,
+                "discount_pct": 10,
+            }
+        )
+        tier_gold = self.env["partner.discount.tier"].create(
+            {
+                "name": "Zlatý",
+                "min_spent": 5000,
+                "discount_pct": 15,
+            }
+        )
 
-        partner = self.env["res.partner"].create({
-            "name": "Test Tier Ordering",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test Tier Ordering",
+            }
+        )
 
-        product = self.env["product.template"].create({
-            "name": "Test Tier Štítek",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Tier Štítek",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
         # Jedna objednávka – 50 ks koženky 30×20mm
         # Tier "Do 100": margin 240%, pcs/hour 90
         # Cena cca 15-20 Kč/ks → 50 × 15 = 750+ Kč → Silver (500+)
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
-        self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
+        self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
         order.action_confirm()
         invoice = order._create_invoices()
         invoice.action_post()
@@ -1081,21 +1215,26 @@ class TestLabelCalculator(TransactionCase):
         _logger.info(
             "TEST 19: Útrata=%.2f, Hladina=%s, Sleva=%.1f%%",
             partner.label_total_invoiced,
-            partner.label_discount_tier_id.name
-            if partner.label_discount_tier_id else "žádná",
+            (
+                partner.label_discount_tier_id.name
+                if partner.label_discount_tier_id
+                else "žádná"
+            ),
             partner.label_effective_discount,
         )
 
         # Útrata musí být > 500 (Silver)
         self.assertGreater(
-            partner.label_total_invoiced, 500,
-            f"Útrata {partner.label_total_invoiced} by měla být > 500"
+            partner.label_total_invoiced,
+            500,
+            f"Útrata {partner.label_total_invoiced} by měla být > 500",
         )
 
         # Musí být Silver (500 ≤ útrata < 5000)
         self.assertEqual(
-            partner.label_discount_tier_id.id, tier_silver.id,
-            f"Očekáván Silver, útrata={partner.label_total_invoiced}"
+            partner.label_discount_tier_id.id,
+            tier_silver.id,
+            f"Očekáván Silver, útrata={partner.label_total_invoiced}",
         )
         self.assertEqual(partner.label_effective_discount, 10)
 
@@ -1104,15 +1243,16 @@ class TestLabelCalculator(TransactionCase):
             partner.label_total_invoiced,
         )
 
-
     # ─────────────────────────────────────────────
     # TEST 20: Zákaznické slevy – žádná hladina
     # ─────────────────────────────────────────────
     def test_20_discount_no_tier(self):
         """Zákazník bez útraty → žádná sleva."""
-        partner = self.env["res.partner"].create({
-            "name": "Test Nový Zákazník",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test Nový Zákazník",
+            }
+        )
 
         partner._compute_label_total_invoiced()
         partner._compute_label_discount_tier()
@@ -1130,42 +1270,52 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_21_discount_applied_to_so_line(self):
         """Ověření, že se sleva přenese na řádek objednávky."""
-        self.env["partner.discount.tier"].create({
-            "name": "Bronzový",
-            "min_spent": 0,
-            "discount_pct": 5,
-        })
+        self.env["partner.discount.tier"].create(
+            {
+                "name": "Bronzový",
+                "min_spent": 0,
+                "discount_pct": 5,
+            }
+        )
 
-        partner = self.env["res.partner"].create({
-            "name": "Test SO Discount",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test SO Discount",
+            }
+        )
 
         # Přepočítej – min_spent=0 → Bronze 5%
         partner._compute_label_discount_tier()
         partner._compute_label_effective_discount()
         self.assertEqual(partner.label_effective_discount, 5)
 
-        product = self.env["product.template"].create({
-            "name": "Test Štítek",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Štítek",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
 
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 10,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-            "discount": partner.label_effective_discount,
-        })
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 10,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+                "discount": partner.label_effective_discount,
+            }
+        )
 
         # Sleva musí být 5%
         self.assertEqual(line.discount, 5)
@@ -1181,7 +1331,9 @@ class TestLabelCalculator(TransactionCase):
 
         _logger.info(
             "TEST 21: SO řádek – cena %.2f, sleva %s%%, subtotal %.2f ✅",
-            line.price_unit, line.discount, line.price_subtotal,
+            line.price_unit,
+            line.discount,
+            line.price_subtotal,
         )
 
     # ─────────────────────────────────────────────
@@ -1189,39 +1341,49 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_22_invoice_flow_with_discount(self):
         """SO → Potvrzení → Faktura – sleva se přenese."""
-        self.env["partner.discount.tier"].create({
-            "name": "Test Tier",
-            "min_spent": 0,
-            "discount_pct": 8,
-        })
+        self.env["partner.discount.tier"].create(
+            {
+                "name": "Test Tier",
+                "min_spent": 0,
+                "discount_pct": 8,
+            }
+        )
 
-        partner = self.env["res.partner"].create({
-            "name": "Test Invoice Discount",
-        })
+        partner = self.env["res.partner"].create(
+            {
+                "name": "Test Invoice Discount",
+            }
+        )
         partner._compute_label_discount_tier()
         partner._compute_label_effective_discount()
 
-        product = self.env["product.template"].create({
-            "name": "Test Štítek Faktura",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Štítek Faktura",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
-        order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
+        order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
 
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-            "discount": partner.label_effective_discount,
-        })
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+                "discount": partner.label_effective_discount,
+            }
+        )
 
         # Potvrď
         order.action_confirm()
@@ -1258,12 +1420,12 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_23_variable_symbol_basic(self):
         """Variable symbol extracts digits from invoice name."""
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": self.env["res.partner"].create(
-                {"name": "VS Test"}
-            ).id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": self.env["res.partner"].create({"name": "VS Test"}).id,
+            }
+        )
         # Draft invoice has name "/"
         self.assertEqual(move.label_variable_symbol, "")
 
@@ -1272,20 +1434,22 @@ class TestLabelCalculator(TransactionCase):
         move._compute_variable_symbol()
         self.assertEqual(move.label_variable_symbol, "202600042")
 
-        _logger.info("TEST 23: Variable symbol INV/2026/00042 → %s ✅",
-                      move.label_variable_symbol)
+        _logger.info(
+            "TEST 23: Variable symbol INV/2026/00042 → %s ✅",
+            move.label_variable_symbol,
+        )
 
     # ─────────────────────────────────────────────
     # TEST 24: Variable symbol – edge cases
     # ─────────────────────────────────────────────
     def test_24_variable_symbol_edge_cases(self):
         """Variable symbol handles '/', empty, long numbers."""
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": self.env["res.partner"].create(
-                {"name": "VS Edge"}
-            ).id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": self.env["res.partner"].create({"name": "VS Edge"}).id,
+            }
+        )
 
         # "/" → empty
         move.name = "/"
@@ -1316,21 +1480,28 @@ class TestLabelCalculator(TransactionCase):
             return
 
         # Get or create a CZK bank account for company (seed data may already have it)
-        bank = self.env["res.partner.bank"].search([
-            ("sanitized_acc_number", "=", "CZ6508000000192000145399"),
-            ("partner_id", "=", company.partner_id.id),
-        ], limit=1) or self.env["res.partner.bank"].create({
-            "acc_number": "CZ6508000000192000145399",
-            "partner_id": company.partner_id.id,
-            "currency_id": czk.id,
-        })
+        bank = self.env["res.partner.bank"].search(
+            [
+                ("sanitized_acc_number", "=", "CZ6508000000192000145399"),
+                ("partner_id", "=", company.partner_id.id),
+            ],
+            limit=1,
+        ) or self.env["res.partner.bank"].create(
+            {
+                "acc_number": "CZ6508000000192000145399",
+                "partner_id": company.partner_id.id,
+                "currency_id": czk.id,
+            }
+        )
 
         partner = self.env["res.partner"].create({"name": "SPD Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": czk.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": czk.id,
+            }
+        )
         move.name = "FV/2026/00001"
         move._compute_variable_symbol()
 
@@ -1353,21 +1524,28 @@ class TestLabelCalculator(TransactionCase):
             _logger.info("TEST 26: CZK currency not found, skipping")
             return
 
-        self.env["res.partner.bank"].search([
-            ("sanitized_acc_number", "=", "CZ6508000000192000145399"),
-            ("partner_id", "=", company.partner_id.id),
-        ], limit=1) or self.env["res.partner.bank"].create({
-            "acc_number": "CZ6508000000192000145399",
-            "partner_id": company.partner_id.id,
-            "currency_id": czk.id,
-        })
+        self.env["res.partner.bank"].search(
+            [
+                ("sanitized_acc_number", "=", "CZ6508000000192000145399"),
+                ("partner_id", "=", company.partner_id.id),
+            ],
+            limit=1,
+        ) or self.env["res.partner.bank"].create(
+            {
+                "acc_number": "CZ6508000000192000145399",
+                "partner_id": company.partner_id.id,
+                "currency_id": czk.id,
+            }
+        )
 
         partner = self.env["res.partner"].create({"name": "QR Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": czk.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": czk.id,
+            }
+        )
         move.name = "FV/2026/00001"
         move._compute_variable_symbol()
 
@@ -1381,10 +1559,12 @@ class TestLabelCalculator(TransactionCase):
         self.assertTrue(qr_b64, "QR code base64 should not be empty")
         # Verify it's valid base64
         import base64
+
         decoded = base64.b64decode(qr_b64)
         # PNG starts with \x89PNG
-        self.assertTrue(decoded[:4] == b"\x89PNG",
-                        "QR code should be a valid PNG image")
+        self.assertTrue(
+            decoded[:4] == b"\x89PNG", "QR code should be a valid PNG image"
+        )
 
         _logger.info("TEST 26: QR code base64 length=%d ✅", len(qr_b64))
 
@@ -1400,21 +1580,28 @@ class TestLabelCalculator(TransactionCase):
             return
 
         eur.active = True
-        self.env["res.partner.bank"].search([
-            ("sanitized_acc_number", "=", "CZ1234567890123456789012"),
-            ("partner_id", "=", company.partner_id.id),
-        ], limit=1) or self.env["res.partner.bank"].create({
-            "acc_number": "CZ1234567890123456789012",
-            "partner_id": company.partner_id.id,
-            "currency_id": eur.id,
-        })
+        self.env["res.partner.bank"].search(
+            [
+                ("sanitized_acc_number", "=", "CZ1234567890123456789012"),
+                ("partner_id", "=", company.partner_id.id),
+            ],
+            limit=1,
+        ) or self.env["res.partner.bank"].create(
+            {
+                "acc_number": "CZ1234567890123456789012",
+                "partner_id": company.partner_id.id,
+                "currency_id": eur.id,
+            }
+        )
 
         partner = self.env["res.partner"].create({"name": "EUR EPC Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": eur.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": eur.id,
+            }
+        )
 
         # SPD should be empty for EUR
         spd = move._get_spd_string()
@@ -1448,30 +1635,38 @@ class TestLabelCalculator(TransactionCase):
             _logger.info("TEST 28: CZK currency not found, skipping")
             return
 
-        bank_czk = (
-            self.env["res.partner.bank"].search([
+        bank_czk = self.env["res.partner.bank"].search(
+            [
                 ("sanitized_acc_number", "=", "CZ6508000000192000145399"),
                 ("partner_id", "=", company.partner_id.id),
-            ], limit=1)
-            or self.env["res.partner.bank"].create({
+            ],
+            limit=1,
+        ) or self.env["res.partner.bank"].create(
+            {
                 "acc_number": "CZ6508000000192000145399",
                 "partner_id": company.partner_id.id,
                 "currency_id": czk.id,
-            })
+            }
         )
 
         partner = self.env["res.partner"].create({"name": "Bank Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": czk.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": czk.id,
+            }
+        )
 
-        self.assertEqual(move.partner_bank_id.id, bank_czk.id,
-                         "Bank account should be auto-selected by currency")
+        self.assertEqual(
+            move.partner_bank_id.id,
+            bank_czk.id,
+            "Bank account should be auto-selected by currency",
+        )
 
-        _logger.info("TEST 28: Auto bank selection → %s ✅",
-                      move.partner_bank_id.acc_number)
+        _logger.info(
+            "TEST 28: Auto bank selection → %s ✅", move.partner_bank_id.acc_number
+        )
 
     # ─────────────────────────────────────────────
     # TEST 29: Cash rounding auto-set
@@ -1483,25 +1678,31 @@ class TestLabelCalculator(TransactionCase):
             _logger.info("TEST 29: CZK currency not found, skipping")
             return
 
-        rounding_czk = self.env["account.cash.rounding"].create({
-            "name": "CZK test rounding",
-            "rounding": 1.0,
-            "strategy": "add_invoice_line",
-            "rounding_method": "HALF-UP",
-        })
+        rounding_czk = self.env["account.cash.rounding"].create(
+            {
+                "name": "CZK test rounding",
+                "rounding": 1.0,
+                "strategy": "add_invoice_line",
+                "rounding_method": "HALF-UP",
+            }
+        )
 
         partner = self.env["res.partner"].create({"name": "Rounding Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": czk.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": czk.id,
+            }
+        )
 
-        self.assertTrue(move.invoice_cash_rounding_id,
-                        "Cash rounding should be auto-set")
+        self.assertTrue(
+            move.invoice_cash_rounding_id, "Cash rounding should be auto-set"
+        )
 
-        _logger.info("TEST 29: Auto cash rounding → %s ✅",
-                      move.invoice_cash_rounding_id.name)
+        _logger.info(
+            "TEST 29: Auto cash rounding → %s ✅", move.invoice_cash_rounding_id.name
+        )
 
     # ─────────────────────────────────────────────
     # TEST 30: No QR for unsupported currencies
@@ -1515,11 +1716,13 @@ class TestLabelCalculator(TransactionCase):
 
         usd.active = True
         partner = self.env["res.partner"].create({"name": "USD Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": usd.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": usd.id,
+            }
+        )
 
         self.assertEqual(move._get_spd_string(), "")
         self.assertEqual(move._get_epc_string(), "")
@@ -1539,21 +1742,28 @@ class TestLabelCalculator(TransactionCase):
             return
 
         eur.active = True
-        self.env["res.partner.bank"].search([
-            ("sanitized_acc_number", "=", "CZ1234567890123456789012"),
-            ("partner_id", "=", company.partner_id.id),
-        ], limit=1) or self.env["res.partner.bank"].create({
-            "acc_number": "CZ1234567890123456789012",
-            "partner_id": company.partner_id.id,
-            "currency_id": eur.id,
-        })
+        self.env["res.partner.bank"].search(
+            [
+                ("sanitized_acc_number", "=", "CZ1234567890123456789012"),
+                ("partner_id", "=", company.partner_id.id),
+            ],
+            limit=1,
+        ) or self.env["res.partner.bank"].create(
+            {
+                "acc_number": "CZ1234567890123456789012",
+                "partner_id": company.partner_id.id,
+                "currency_id": eur.id,
+            }
+        )
 
         partner = self.env["res.partner"].create({"name": "EPC Format Test"})
-        move = self.env["account.move"].create({
-            "move_type": "out_invoice",
-            "partner_id": partner.id,
-            "currency_id": eur.id,
-        })
+        move = self.env["account.move"].create(
+            {
+                "move_type": "out_invoice",
+                "partner_id": partner.id,
+                "currency_id": eur.id,
+            }
+        )
         move.name = "FV/2026/00010"
         move._compute_variable_symbol()
 
@@ -1595,41 +1805,52 @@ class TestLabelCalculator(TransactionCase):
             return
 
         # Set EUR rate: 1 EUR = 25 CZK → rate = 0.04
-        eur_rate = self.env["res.currency.rate"].search([
-            ("currency_id", "=", eur.id),
-            ("company_id", "in", [company.id, False]),
-        ], limit=1)
+        eur_rate = self.env["res.currency.rate"].search(
+            [
+                ("currency_id", "=", eur.id),
+                ("company_id", "in", [company.id, False]),
+            ],
+            limit=1,
+        )
         if eur_rate:
             eur_rate.rate = 0.04
         else:
-            self.env["res.currency.rate"].create({
-                "currency_id": eur.id,
-                "rate": 0.04,
-                "company_id": company.id,
-            })
+            self.env["res.currency.rate"].create(
+                {
+                    "currency_id": eur.id,
+                    "rate": 0.04,
+                    "company_id": company.id,
+                }
+            )
 
-        product = self.env["product.template"].create({
-            "name": "Test Currency Product",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test Currency Product",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
         partner = self.env["res.partner"].create({"name": "Currency Test"})
 
         # CZK order – price should stay in CZK
-        czk_order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
-        czk_line = self.env["sale.order.line"].create({
-            "order_id": czk_order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        czk_order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
+        czk_line = self.env["sale.order.line"].create(
+            {
+                "order_id": czk_order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
         czk_price = czk_line.price_unit
         czk_calc_price = czk_line.label_calculated_price
 
@@ -1640,35 +1861,45 @@ class TestLabelCalculator(TransactionCase):
         # EUR order – price_unit should be converted, label_calculated_price stays CZK
         # Note: sale.order.currency_id is a stored computed field (from pricelist_id)
         # in Odoo 19 and must be set via write() after creation to take effect.
-        eur_order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-        })
+        eur_order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+            }
+        )
         eur_order.write({"currency_id": eur.id})
-        eur_line = self.env["sale.order.line"].create({
-            "order_id": eur_order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        eur_line = self.env["sale.order.line"].create(
+            {
+                "order_id": eur_order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         # label_calculated_price stores CZK (same as CZK order)
         self.assertAlmostEqual(
-            eur_line.label_calculated_price, czk_calc_price, places=2,
+            eur_line.label_calculated_price,
+            czk_calc_price,
+            places=2,
             msg="label_calculated_price should be in CZK regardless of order currency",
         )
 
         # price_unit should be approximately CZK_price / 25
         expected_eur = czk_price / 25.0
         self.assertAlmostEqual(
-            eur_line.price_unit, expected_eur, places=2,
+            eur_line.price_unit,
+            expected_eur,
+            places=2,
             msg="EUR price_unit should be ~CZK_price/25",
         )
 
         _logger.info(
             "TEST 32: CZK price=%.2f, EUR price=%.2f (expected ~%.2f) ✅",
-            czk_price, eur_line.price_unit, expected_eur,
+            czk_price,
+            eur_line.price_unit,
+            expected_eur,
         )
 
     # ─────────────────────────────────────────────
@@ -1689,38 +1920,47 @@ class TestLabelCalculator(TransactionCase):
             return
 
         # Set EUR rate: 1 EUR = 25 CZK
-        eur_rate = self.env["res.currency.rate"].search([
-            ("currency_id", "=", eur.id),
-            ("company_id", "in", [company.id, False]),
-        ], limit=1)
+        eur_rate = self.env["res.currency.rate"].search(
+            [
+                ("currency_id", "=", eur.id),
+                ("company_id", "in", [company.id, False]),
+            ],
+            limit=1,
+        )
         if eur_rate:
             eur_rate.rate = 0.04
         else:
-            self.env["res.currency.rate"].create({
-                "currency_id": eur.id,
-                "rate": 0.04,
-                "company_id": company.id,
-            })
+            self.env["res.currency.rate"].create(
+                {
+                    "currency_id": eur.id,
+                    "rate": 0.04,
+                    "company_id": company.id,
+                }
+            )
 
-        product = self.env["product.template"].create({
-            "name": "Test CurrencyChange Product",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test CurrencyChange Product",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
         partner = self.env["res.partner"].create({"name": "CurrChange Test"})
 
         # Create CZK order and add calculator line
         order = self.env["sale.order"].create({"partner_id": partner.id})
-        line = self.env["sale.order.line"].create({
-            "order_id": order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
         czk_price = line.price_unit
         czk_calc_price = line.label_calculated_price
         self.assertTrue(czk_price > 0, "Initial CZK price should be > 0")
@@ -1730,25 +1970,33 @@ class TestLabelCalculator(TransactionCase):
 
         # price_unit should now be converted; label_calculated_price unchanged
         self.assertAlmostEqual(
-            line.label_calculated_price, czk_calc_price, places=2,
+            line.label_calculated_price,
+            czk_calc_price,
+            places=2,
             msg="label_calculated_price must not change when currency changes",
         )
         expected_eur = czk_price / 25.0
         self.assertAlmostEqual(
-            line.price_unit, expected_eur, places=2,
+            line.price_unit,
+            expected_eur,
+            places=2,
             msg="price_unit should be converted to EUR after currency change",
         )
 
         # Change back to CZK
         order.write({"currency_id": czk.id})
         self.assertAlmostEqual(
-            line.price_unit, czk_price, places=2,
+            line.price_unit,
+            czk_price,
+            places=2,
             msg="price_unit should return to CZK value after reverting currency",
         )
 
         _logger.info(
             "TEST 33: CZK=%.2f → EUR=%.2f → CZK=%.2f ✅",
-            czk_price, expected_eur, line.price_unit,
+            czk_price,
+            expected_eur,
+            line.price_unit,
         )
 
     # ─────────────────────────────────────────────
@@ -1764,40 +2012,51 @@ class TestLabelCalculator(TransactionCase):
             return
 
         eur.active = True
-        eur_rate = self.env["res.currency.rate"].search([
-            ("currency_id", "=", eur.id),
-            ("company_id", "in", [company.id, False]),
-        ], limit=1)
+        eur_rate = self.env["res.currency.rate"].search(
+            [
+                ("currency_id", "=", eur.id),
+                ("company_id", "in", [company.id, False]),
+            ],
+            limit=1,
+        )
         if eur_rate:
             eur_rate.rate = 0.04
         else:
-            self.env["res.currency.rate"].create({
-                "currency_id": eur.id,
-                "rate": 0.04,
-                "company_id": company.id,
-            })
+            self.env["res.currency.rate"].create(
+                {
+                    "currency_id": eur.id,
+                    "rate": 0.04,
+                    "company_id": company.id,
+                }
+            )
 
-        product = self.env["product.template"].create({
-            "name": "Test UpdatePrices Product",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test UpdatePrices Product",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
         partner = self.env["res.partner"].create({"name": "UpdatePrices Test"})
 
-        eur_order = self.env["sale.order"].create({
-            "partner_id": partner.id,
-            "currency_id": eur.id,
-        })
-        line = self.env["sale.order.line"].create({
-            "order_id": eur_order.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        eur_order = self.env["sale.order"].create(
+            {
+                "partner_id": partner.id,
+                "currency_id": eur.id,
+            }
+        )
+        line = self.env["sale.order.line"].create(
+            {
+                "order_id": eur_order.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
         self.assertTrue(line.price_unit > 0, "Initial EUR price should be > 0")
 
         # Simulate "Update Prices" by calling _get_pricelist_price()
@@ -1811,13 +2070,16 @@ class TestLabelCalculator(TransactionCase):
             line.label_calculated_price,
         )
         self.assertAlmostEqual(
-            pricelist_price, expected, places=2,
+            pricelist_price,
+            expected,
+            places=2,
             msg="_get_pricelist_price should return converted calc price",
         )
 
         _logger.info(
             "TEST 34: pricelist_price=%.4f (expected=%.4f) ✅",
-            pricelist_price, expected,
+            pricelist_price,
+            expected,
         )
 
     # ─────────────────────────────────────────────
@@ -1848,11 +2110,17 @@ class TestLabelCalculator(TransactionCase):
         tiers_standard = self.env["label.production.tier"].search(
             [("pricing_profile_id", "=", standard.id)]
         )
-        self.assertTrue(len(tiers_standard) > 0, "Musí existovat hladiny přiřazené ke Standard profilu")
+        self.assertTrue(
+            len(tiers_standard) > 0,
+            "Musí existovat hladiny přiřazené ke Standard profilu",
+        )
 
         _logger.info(
             "TEST 35: Profily – Standard=%s, VIP1=%s, VIP2=%s, Standard hladiny=%d ✅",
-            standard.name, vip1.name, vip2.name, len(tiers_standard),
+            standard.name,
+            vip1.name,
+            vip2.name,
+            len(tiers_standard),
         )
 
     # ─────────────────────────────────────────────
@@ -1869,17 +2137,19 @@ class TestLabelCalculator(TransactionCase):
         self.assertTrue(standard and vip1, "Profily musí existovat")
 
         # Vytvoř VIP tier pro skupinu koženky s lepšími parametry
-        vip_tier = self.env["label.production.tier"].create({
-            "name": "VIP1 Unlimited",
-            "group_id": self.group_leatherette.id,
-            "pricing_profile_id": vip1.id,
-            "min_quantity": 1,
-            "max_quantity": 999999,
-            "pieces_per_hour": 150,    # vyšší výkon
-            "margin_pct": 120,         # nižší marže
-            "waste_test_percentage": 5,
-            "waste_pruning_percentage": 5,
-        })
+        vip_tier = self.env["label.production.tier"].create(
+            {
+                "name": "VIP1 Unlimited",
+                "group_id": self.group_leatherette.id,
+                "pricing_profile_id": vip1.id,
+                "min_quantity": 1,
+                "max_quantity": 999999,
+                "pieces_per_hour": 150,  # vyšší výkon
+                "margin_pct": 120,  # nižší marže
+                "waste_test_percentage": 5,
+                "waste_pruning_percentage": 5,
+            }
+        )
 
         # Kalkulace s Standard profilem
         result_std = self.calc.compute_price(
@@ -1939,15 +2209,21 @@ class TestLabelCalculator(TransactionCase):
         )
 
         # Kalkulace musí uspět (fallback na Standard)
-        self.assertTrue(result["unit_price"] > 0, "Cena musí být > 0 i při VIP2 bez tieru")
+        self.assertTrue(
+            result["unit_price"] > 0, "Cena musí být > 0 i při VIP2 bez tieru"
+        )
         # Tier name musí být Standard tier
         self.assertIsNotNone(result.get("tier_name"), "Tier name nesmí být None")
-        self.assertNotIn("error", [w["type"] for w in result.get("warnings", [])],
-            "Nesmí být chyba – fallback musí fungovat")
+        self.assertNotIn(
+            "error",
+            [w["type"] for w in result.get("warnings", [])],
+            "Nesmí být chyba – fallback musí fungovat",
+        )
 
         _logger.info(
             "TEST 37: VIP2 fallback → tier=%s, cena=%.2f ✅",
-            result.get("tier_name"), result["unit_price"],
+            result.get("tier_name"),
+            result["unit_price"],
         )
 
     # ─────────────────────────────────────────────
@@ -1961,41 +2237,50 @@ class TestLabelCalculator(TransactionCase):
         self.assertTrue(vip1, "VIP1 profil musí existovat")
 
         # Vytvoř slevovou hladinu Gold
-        tier_gold = self.env["partner.discount.tier"].create({
-            "name": "Zlatý test VIP",
-            "min_spent": 1,   # velmi nízký práh pro test
-            "discount_pct": 15,
-        })
+        tier_gold = self.env["partner.discount.tier"].create(
+            {
+                "name": "Zlatý test VIP",
+                "min_spent": 1,  # velmi nízký práh pro test
+                "discount_pct": 15,
+            }
+        )
 
         # Vytvoř zákazníka s vysokou útratou → Gold hladina
-        partner_vip = self.env["res.partner"].create({
-            "name": "VIP Zákazník Test",
-            "label_discount_override": 15,   # simuluj Gold slevu
-            "label_is_vip": False,
-        })
+        partner_vip = self.env["res.partner"].create(
+            {
+                "name": "VIP Zákazník Test",
+                "label_discount_override": 15,  # simuluj Gold slevu
+                "label_is_vip": False,
+            }
+        )
 
         # Bez VIP → sleva 15%
         self.assertEqual(
-            partner_vip.label_effective_discount, 15,
+            partner_vip.label_effective_discount,
+            15,
             "Bez VIP musí být sleva 15%",
         )
 
         # Přepni na VIP
-        partner_vip.write({
-            "label_is_vip": True,
-            "label_pricing_profile_id": vip1.id,
-        })
+        partner_vip.write(
+            {
+                "label_is_vip": True,
+                "label_pricing_profile_id": vip1.id,
+            }
+        )
 
         # S VIP → sleva musí být 0
         self.assertEqual(
-            partner_vip.label_effective_discount, 0,
+            partner_vip.label_effective_discount,
+            0,
             "VIP zákazník musí mít slevu 0",
         )
 
         # Vypni VIP → sleva se vrátí
         partner_vip.write({"label_is_vip": False})
         self.assertEqual(
-            partner_vip.label_effective_discount, 15,
+            partner_vip.label_effective_discount,
+            15,
             "Po vypnutí VIP se musí vrátit původní sleva",
         )
 
@@ -2006,25 +2291,31 @@ class TestLabelCalculator(TransactionCase):
     # ─────────────────────────────────────────────
     def test_39_vip_eligibility_computation(self):
         """VIP eligibilita: 3 faktury > 3000 Kč každá a > 300 ks každá."""
-        product = self.env["product.template"].create({
-            "name": "Test VIP Eligibility Product",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test VIP Eligibility Product",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
-        partner = self.env["res.partner"].create({"name": "VIP Eligibility Test Partner"})
+        partner = self.env["res.partner"].create(
+            {"name": "VIP Eligibility Test Partner"}
+        )
 
         def create_posted_invoice(qty, price_unit):
             """Vytvoří a potvrdí fakturu s daným množstvím a cenou."""
             order = self.env["sale.order"].create({"partner_id": partner.id})
-            line = self.env["sale.order.line"].create({
-                "order_id": order.id,
-                "product_id": product.product_variant_id.id,
-                "product_uom_qty": qty,
-                "price_unit": price_unit,
-            })
+            line = self.env["sale.order.line"].create(
+                {
+                    "order_id": order.id,
+                    "product_id": product.product_variant_id.id,
+                    "product_uom_qty": qty,
+                    "price_unit": price_unit,
+                }
+            )
             order.action_confirm()
             invoice = order._create_invoices()
             invoice.action_post()
@@ -2035,15 +2326,17 @@ class TestLabelCalculator(TransactionCase):
         self.assertFalse(partner.label_vip_eligible, "Bez faktur nesmí být eligible")
 
         # Vytvoř 2 faktury > 3000 Kč s > 300 ks
-        inv1 = create_posted_invoice(qty=400, price_unit=10)   # 4000 Kč
-        inv2 = create_posted_invoice(qty=500, price_unit=10)   # 5000 Kč
+        inv1 = create_posted_invoice(qty=400, price_unit=10)  # 4000 Kč
+        inv2 = create_posted_invoice(qty=500, price_unit=10)  # 5000 Kč
         partner._compute_label_vip_eligible()
         self.assertFalse(partner.label_vip_eligible, "Pouze 2 faktury nestačí na VIP")
 
         # Vytvoř 3. fakturu > 3000 Kč s > 300 ks
-        inv3 = create_posted_invoice(qty=350, price_unit=10)   # 3500 Kč
+        inv3 = create_posted_invoice(qty=350, price_unit=10)  # 3500 Kč
         partner._compute_label_vip_eligible()
-        self.assertTrue(partner.label_vip_eligible, "3 faktury > 3000 Kč s > 300 ks = VIP eligible")
+        self.assertTrue(
+            partner.label_vip_eligible, "3 faktury > 3000 Kč s > 300 ks = VIP eligible"
+        )
 
         _logger.info("TEST 39: VIP eligibilita – 3 faktury splňují podmínky ✅")
 
@@ -2061,60 +2354,72 @@ class TestLabelCalculator(TransactionCase):
         self.assertTrue(vip1 and standard, "Profily musí existovat")
 
         # Vytvoř VIP tier pro skupinu koženky
-        vip_tier = self.env["label.production.tier"].create({
-            "name": "VIP1 SO Test",
-            "group_id": self.group_leatherette.id,
-            "pricing_profile_id": vip1.id,
-            "min_quantity": 1,
-            "max_quantity": 999999,
-            "pieces_per_hour": 200,
-            "margin_pct": 80,
-            "waste_test_percentage": 2,
-            "waste_pruning_percentage": 2,
-        })
+        vip_tier = self.env["label.production.tier"].create(
+            {
+                "name": "VIP1 SO Test",
+                "group_id": self.group_leatherette.id,
+                "pricing_profile_id": vip1.id,
+                "min_quantity": 1,
+                "max_quantity": 999999,
+                "pieces_per_hour": 200,
+                "margin_pct": 80,
+                "waste_test_percentage": 2,
+                "waste_pruning_percentage": 2,
+            }
+        )
 
-        product = self.env["product.template"].create({
-            "name": "Test VIP SO Product",
-            "type": "service",
-            "pricing_type": "calculator",
-            "label_material_group_id": self.group_leatherette.id,
-            "invoice_policy": "order",
-        })
+        product = self.env["product.template"].create(
+            {
+                "name": "Test VIP SO Product",
+                "type": "service",
+                "pricing_type": "calculator",
+                "label_material_group_id": self.group_leatherette.id,
+                "invoice_policy": "order",
+            }
+        )
 
         # Standard zákazník
-        partner_std = self.env["res.partner"].create({
-            "name": "Standard SO Test Partner",
-            "label_pricing_profile_id": standard.id,
-        })
+        partner_std = self.env["res.partner"].create(
+            {
+                "name": "Standard SO Test Partner",
+                "label_pricing_profile_id": standard.id,
+            }
+        )
 
         # VIP zákazník
-        partner_vip = self.env["res.partner"].create({
-            "name": "VIP SO Test Partner",
-            "label_is_vip": True,
-            "label_pricing_profile_id": vip1.id,
-        })
+        partner_vip = self.env["res.partner"].create(
+            {
+                "name": "VIP SO Test Partner",
+                "label_is_vip": True,
+                "label_pricing_profile_id": vip1.id,
+            }
+        )
 
         # Vytvoř SO pro Standard zákazníka
         order_std = self.env["sale.order"].create({"partner_id": partner_std.id})
-        line_std = self.env["sale.order.line"].create({
-            "order_id": order_std.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        line_std = self.env["sale.order.line"].create(
+            {
+                "order_id": order_std.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         # Vytvoř SO pro VIP zákazníka
         order_vip = self.env["sale.order"].create({"partner_id": partner_vip.id})
-        line_vip = self.env["sale.order.line"].create({
-            "order_id": order_vip.id,
-            "product_id": product.product_variant_id.id,
-            "product_uom_qty": 50,
-            "label_material_id": self.mat_leatherette.id,
-            "label_width_mm": 30,
-            "label_height_mm": 20,
-        })
+        line_vip = self.env["sale.order.line"].create(
+            {
+                "order_id": order_vip.id,
+                "product_id": product.product_variant_id.id,
+                "product_uom_qty": 50,
+                "label_material_id": self.mat_leatherette.id,
+                "label_width_mm": 30,
+                "label_height_mm": 20,
+            }
+        )
 
         # VIP zákazník musí mít nižší cenu díky lepšímu tieru
         self.assertTrue(line_std.price_unit > 0, "Standard cena musí být > 0")
@@ -2126,7 +2431,9 @@ class TestLabelCalculator(TransactionCase):
         )
 
         # VIP zákazník má slevu = 0
-        self.assertEqual(line_vip.discount, 0, "VIP zákazník nesmí mít slevu na SO lince")
+        self.assertEqual(
+            line_vip.discount, 0, "VIP zákazník nesmí mít slevu na SO lince"
+        )
 
         _logger.info(
             "TEST 40: SO Standard=%.2f, VIP=%.2f (levnější o %.2f), VIP sleva=%.0f%% ✅",

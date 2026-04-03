@@ -1,15 +1,17 @@
-from . import label_pricing_profile
-from . import label_machine
-from . import label_material_group
-from . import label_material
-from . import label_production_tier
-from . import label_material_tier_override
-from . import label_calculator
-from . import product_template
-from . import sale_order
-from . import sale_order_line
-from . import account_move
-from . import account_move_line
-from . import partner_discount_tier
-from . import res_partner
-from . import res_config_settings
+from . import (
+    account_move,
+    account_move_line,
+    label_calculator,
+    label_machine,
+    label_material,
+    label_material_group,
+    label_material_tier_override,
+    label_pricing_profile,
+    label_production_tier,
+    partner_discount_tier,
+    product_template,
+    res_config_settings,
+    res_partner,
+    sale_order,
+    sale_order_line,
+)

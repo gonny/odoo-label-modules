@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -42,10 +42,12 @@ class LabelPricingProfile(models.Model):
     def _check_single_default(self):
         """Ensure at most one pricing profile is marked as the default."""
         if any(profile.is_default for profile in self):
-            duplicates = self.search([
-                ("is_default", "=", True),
-                ("id", "not in", self.ids),
-            ])
+            duplicates = self.search(
+                [
+                    ("is_default", "=", True),
+                    ("id", "not in", self.ids),
+                ]
+            )
             if duplicates:
                 raise ValidationError(
                     "Pouze jeden cenový profil může být nastaven jako výchozí. "

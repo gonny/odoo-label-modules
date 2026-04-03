@@ -1,2 +1,1 @@
-from . import packeta_api
-from . import dpd_api
+from . import dpd_api, packeta_api

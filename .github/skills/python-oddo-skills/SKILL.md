@@ -37,6 +37,7 @@ This document outlines key skills and patterns for developing Odoo 19 modules.
 - `make test` must pass (all unit tests) after every change
 - `make reset` must work (clean install) after every change
 - `make smoke` must pass (E2E flow) after every change
+- `make quality` must pass (code linting) after every change
 - Bank accounts in tests: search for existing before creating (avoid duplicate IBAN errors)
 - Cash rounding in tests: ensure profit/loss accounts are set
 
@@ -44,6 +45,14 @@ This document outlines key skills and patterns for developing Odoo 19 modules.
 - Do NOT include implementation code examples (agent knows how to code)
 - Keep it concise – bullet points, not paragraphs
 - Focus on ERRATA (what's different/broken) not tutorials
+- Odoo 19 forbids QWeb directives (`t-if`, `t-else`, `t-foreach`, `t-esc`, `t-field`, `t-raw`) in XML view definitions (form, list, search). These directives are only allowed in QWeb report templates (PDF invoices, delivery slips).
+
+### Rule for t-directives in XML files:
+
+| File | `t-if` / `t-field` | `invisible` / `field` |
+|---|---|---|
+| `views/*.xml` (form, list, search) | ❌ FORBIDDEN | ✅ USE THIS |
+| `views/report_*.xml` (QWeb templates) | ✅ ALLOWED | ❌ WON'T WORK |
 
 ## 9. Performance Tips
 

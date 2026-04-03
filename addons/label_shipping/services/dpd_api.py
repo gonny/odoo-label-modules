@@ -45,11 +45,15 @@ def create_shipment(api_key, dsw, data, test_mode=False):
         body = [payload]
         _logger.info("DPD API request: POST %s body=%s", url, body)
         response = requests.post(
-            url, json=body, headers=_headers(api_key), timeout=30,
+            url,
+            json=body,
+            headers=_headers(api_key),
+            timeout=30,
         )
         _logger.info(
             "DPD API response: %s %s",
-            response.status_code, response.text[:500],
+            response.status_code,
+            response.text[:500],
         )
         if response.status_code in (200, 201):
             result = response.json()
@@ -79,11 +83,15 @@ def get_labels(api_key, parcel_ident, test_mode=False):
         payload = {"printType": "pdf", "printFormat": "A6"}
         _logger.info("DPD API request: POST %s body=%s", url, payload)
         response = requests.post(
-            url, json=payload, headers=_headers(api_key), timeout=30,
+            url,
+            json=payload,
+            headers=_headers(api_key),
+            timeout=30,
         )
         _logger.info(
             "DPD API response: %s (content_length=%s)",
-            response.status_code, len(response.content),
+            response.status_code,
+            len(response.content),
         )
         if response.status_code == 200:
             return True, response.content
@@ -110,7 +118,8 @@ def cancel_shipment(api_key, shipment_id, test_mode=False):
         response = requests.delete(url, headers=_headers(api_key), timeout=30)
         _logger.info(
             "DPD API response: %s %s",
-            response.status_code, response.text[:500],
+            response.status_code,
+            response.text[:500],
         )
         if response.status_code in (200, 204):
             return True, {"status": "cancelled"}

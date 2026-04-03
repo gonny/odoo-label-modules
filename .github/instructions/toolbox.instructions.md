@@ -78,3 +78,4 @@ falls back to standard environment variables.
   - `make test` – run unit tests
   - `make reset` – reset database and install module
   - `make smoke` – run E2E smoke tests
+  - `make quality` – run code linting (flake8, black)

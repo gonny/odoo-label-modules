@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 
 
 class ResPartner(models.Model):
@@ -56,7 +56,12 @@ class ResPartner(models.Model):
         help="Zákazník splňuje kritéria pro VIP (informativní – VIP musí přiřadit admin ručně).",
     )
 
-    @api.depends("invoice_ids.state", "invoice_ids.amount_total", "invoice_ids.currency_id", "invoice_ids.invoice_line_ids.quantity")
+    @api.depends(
+        "invoice_ids.state",
+        "invoice_ids.amount_total",
+        "invoice_ids.currency_id",
+        "invoice_ids.invoice_line_ids.quantity",
+    )
     def _compute_label_vip_eligible(self):
         """Spočítá, zda zákazník splňuje kritéria VIP.
 
@@ -68,11 +73,15 @@ class ResPartner(models.Model):
         """
         czk_currency = self.env.ref("base.CZK", raise_if_not_found=False)
         for partner in self:
-            invoices = self.env["account.move"].search([
-                ("partner_id", "=", partner.id),
-                ("move_type", "=", "out_invoice"),
-                ("state", "=", "posted"),
-            ], order="invoice_date desc, id desc", limit=3)
+            invoices = self.env["account.move"].search(
+                [
+                    ("partner_id", "=", partner.id),
+                    ("move_type", "=", "out_invoice"),
+                    ("state", "=", "posted"),
+                ],
+                order="invoice_date desc, id desc",
+                limit=3,
+            )
 
             if len(invoices) < 3:
                 partner.label_vip_eligible = False
@@ -98,7 +107,7 @@ class ResPartner(models.Model):
                 has_large_qty = any(
                     line.quantity > 300
                     for line in inv.invoice_line_ids
-                    if line.display_type not in ('line_section', 'line_note')
+                    if line.display_type not in ("line_section", "line_note")
                 )
                 if not has_large_qty:
                     all_qualify = False
@@ -110,11 +119,13 @@ class ResPartner(models.Model):
     def _compute_label_total_invoiced(self):
         for partner in self:
             # Součet z potvrzených faktur (posted)
-            invoices = self.env["account.move"].search([
-                ("partner_id", "=", partner.id),
-                ("move_type", "=", "out_invoice"),
-                ("state", "=", "posted"),
-            ])
+            invoices = self.env["account.move"].search(
+                [
+                    ("partner_id", "=", partner.id),
+                    ("move_type", "=", "out_invoice"),
+                    ("state", "=", "posted"),
+                ]
+            )
             total = 0
             for inv in invoices:
                 for line in inv.invoice_line_ids:
@@ -153,7 +164,10 @@ class ResPartner(models.Model):
     def _onchange_label_is_vip(self):
         """Při přepnutí VIP nastaví nebo zruší VIP profil."""
         if self.label_is_vip:
-            if not self.label_pricing_profile_id or not self.label_pricing_profile_id.is_vip:
+            if (
+                not self.label_pricing_profile_id
+                or not self.label_pricing_profile_id.is_vip
+            ):
                 vip_profile = self.env["label.pricing.profile"].search(
                     [("is_vip", "=", True), ("active", "=", True)],
                     order="sequence",
@@ -164,7 +178,10 @@ class ResPartner(models.Model):
         else:
             # Pokud má zákazník VIP profil, nahradíme ho standardním.
             # Pokud má zákazník jiný (ne-VIP) profil, zachováme ho.
-            if not self.label_pricing_profile_id or self.label_pricing_profile_id.is_vip:
+            if (
+                not self.label_pricing_profile_id
+                or self.label_pricing_profile_id.is_vip
+            ):
                 standard = self.env["label.pricing.profile"].search(
                     [("is_default", "=", True), ("active", "=", True)],
                     limit=1,
