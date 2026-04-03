@@ -1,5 +1,6 @@
-from odoo import models, fields, api
 import logging
+
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class SaleOrderLine(models.Model):
         "label.material",
         string="Varianta",
         domain="[('group_id', '=', label_material_group_id), "
-               "('group_id.is_addon', '=', False)]",
+        "('group_id.is_addon', '=', False)]",
     )
 
     label_material_group_id = fields.Many2one(
@@ -40,14 +41,14 @@ class SaleOrderLine(models.Model):
         string="Bez testovacích kusů",
         default=False,
         help="Zaškrtni pokud design už byl ověřen a není potřeba "
-             "testovací kusy. Sníží náklad na materiál.",
+        "testovací kusy. Sníží náklad na materiál.",
     )
 
     label_ttr_material_id = fields.Many2one(
         "label.material",
         string="Potisk (TTR)",
         domain="[('group_id.is_addon', '=', True), "
-               "('group_id.material_type', '=', 'length')]",
+        "('group_id.material_type', '=', 'length')]",
     )
 
     label_addon_ids = fields.Many2many(
@@ -57,7 +58,7 @@ class SaleOrderLine(models.Model):
         "material_id",
         string="Příplatky",
         domain="[('group_id.is_addon', '=', True), "
-               "('group_id.material_type', '!=', 'length')]",
+        "('group_id.material_type', '!=', 'length')]",
     )
 
     label_calculated_price = fields.Float(
@@ -71,7 +72,7 @@ class SaleOrderLine(models.Model):
         digits=(12, 4),
         readonly=True,
         help="Čistý náklad na materiál jednoho štítku (bez práce a marže). "
-             "Pod touto cenou dotujete materiál.",
+        "Pod touto cenou dotujete materiál.",
     )
 
     label_price_breakdown = fields.Text(
@@ -111,9 +112,13 @@ class SaleOrderLine(models.Model):
         if self.env.context.get("label_currency_conversion_only"):
             return res
         trigger_fields = {
-            "label_material_id", "label_width_mm", "label_height_mm",
-            "product_uom_qty", "label_is_repeat_design",
-            "label_ttr_material_id", "label_addon_ids",
+            "label_material_id",
+            "label_width_mm",
+            "label_height_mm",
+            "product_uom_qty",
+            "label_is_repeat_design",
+            "label_ttr_material_id",
+            "label_addon_ids",
             "product_template_id",
         }
         if trigger_fields & set(vals.keys()):
@@ -171,15 +176,13 @@ class SaleOrderLine(models.Model):
         # Přímý SQL update aby se vyhnul rekurzi
         super(SaleOrderLine, self).write(vals)
 
-    #=== Vlastní computed pole pro groupované zobrazení historie nabídek zákazníka ===
+    # === Vlastní computed pole pro groupované zobrazení historie nabídek zákazníka ===
     @api.depends("order_id", "order_id.name", "order_id.create_date")
     def _compute_order_display(self):
         for line in self:
             if line.order_id and line.order_id.create_date:
                 date_str = line.order_id.create_date.strftime("%d.%m.%Y")
-                line.label_order_display = (
-                    f"{line.order_id.name} – {date_str}"
-                )
+                line.label_order_display = f"{line.order_id.name} – {date_str}"
             elif line.order_id:
                 line.label_order_display = line.order_id.name
             else:
@@ -189,13 +192,12 @@ class SaleOrderLine(models.Model):
     @api.onchange("product_template_id", "label_material_id")
     def _onchange_apply_partner_discount(self):
         """Automaticky vyplní slevu z hladiny zákazníka."""
-        if (
-            self.pricing_type == "calculator"
-            and self.order_id.partner_id
-            and self.order_id.partner_id.label_effective_discount > 0
-        ):
-            self.discount = self.order_id.partner_id.label_effective_discount
-
+        if self.pricing_type == "calculator" and self.order_id.partner_id:
+            # Avoid unnecessary ORM writes by only updating when the discount value changes.
+            # Returns 0 for VIP customers (no tier-based discount); uses tier/override otherwise.
+            discount = self.order_id.partner_id.label_effective_discount
+            if self.discount != discount:
+                self.discount = discount
 
     # === Onchange: výběr produktu ===
 
@@ -306,7 +308,7 @@ class SaleOrderLine(models.Model):
                 "params": {
                     "title": "Chyba",
                     "message": "Nenalezena otevřená objednávka pro kopírování. "
-                               "Nejdřív vytvořte novou nabídku pro tohoto zákazníka.",
+                    "Nejdřív vytvořte novou nabídku pro tohoto zákazníka.",
                     "type": "warning",
                     "sticky": False,
                 },
@@ -326,9 +328,7 @@ class SaleOrderLine(models.Model):
             }
 
         addon_ids = (
-            [(6, 0, self.label_addon_ids.ids)]
-            if self.label_addon_ids
-            else [(5, 0, 0)]
+            [(6, 0, self.label_addon_ids.ids)] if self.label_addon_ids else [(5, 0, 0)]
         )
 
         # Zjisti slevu zákazníka
@@ -342,14 +342,12 @@ class SaleOrderLine(models.Model):
             "product_template_id": self.product_template_id.id,
             "product_uom_qty": self.product_uom_qty,
             "label_material_id": (
-                self.label_material_id.id
-                if self.label_material_id else False
+                self.label_material_id.id if self.label_material_id else False
             ),
             "label_width_mm": self.label_width_mm,
             "label_height_mm": self.label_height_mm,
             "label_ttr_material_id": (
-                self.label_ttr_material_id.id
-                if self.label_ttr_material_id else False
+                self.label_ttr_material_id.id if self.label_ttr_material_id else False
             ),
             "label_addon_ids": addon_ids,
             "label_is_repeat_design": True,
@@ -365,6 +363,7 @@ class SaleOrderLine(models.Model):
             "view_mode": "form",
             "target": "current",
         }
+
     # === Pomocné metody ===
 
     def _convert_price_to_order_currency(self, company_price):
@@ -399,6 +398,12 @@ class SaleOrderLine(models.Model):
         if self.label_addon_ids:
             addon_ids.extend(self.label_addon_ids.ids)
 
+        # Get partner pricing profile
+        pricing_profile_id = None
+        partner = self.order_id.partner_id
+        if partner and partner.label_pricing_profile_id:
+            pricing_profile_id = partner.label_pricing_profile_id.id
+
         calc = self.env["label.calculator"]
         return calc.compute_price(
             material_id=self.label_material_id.id,
@@ -407,6 +412,7 @@ class SaleOrderLine(models.Model):
             quantity=int(self.product_uom_qty or 1),
             is_repeat_design=self.label_is_repeat_design,
             addon_material_ids=addon_ids or None,
+            pricing_profile_id=pricing_profile_id,
         )
 
     def _format_breakdown(self, result):
@@ -426,15 +432,12 @@ class SaleOrderLine(models.Model):
         lines.append(f"  Materiál (s marží): {mat_cost:.4f} Kč")
         lines.append(f"  Materiál (náklad):  {mat_cost_raw:.4f} Kč")
         lines.append(
-            f"  Práce:              {labor_cost:.4f} Kč "
-            f"({pcs_per_hour:.0f} ks/hod)"
+            f"  Práce:              {labor_cost:.4f} Kč " f"({pcs_per_hour:.0f} ks/hod)"
         )
         if admin_cost > 0:
             lines.append(f"  Admin overhead:     {admin_cost:.4f} Kč")
         if machine_cost > 0:
-            lines.append(
-                f"  Amortizace ({machine_name}): {machine_cost:.4f} Kč"
-            )
+            lines.append(f"  Amortizace ({machine_name}): {machine_cost:.4f} Kč")
 
         addons = bd.get("addons", [])
         if addons:
@@ -448,8 +451,7 @@ class SaleOrderLine(models.Model):
                 if addon.get("type") == "addon_time":
                     secs = addon.get("time_seconds", 0)
                     lines.append(
-                        f"    Čas: {secs:.0f}s × amortizace = "
-                        f"{addon_mach:.4f} Kč"
+                        f"    Čas: {secs:.0f}s × amortizace = " f"{addon_mach:.4f} Kč"
                     )
                 else:
                     if addon_mat > 0:
@@ -461,19 +463,18 @@ class SaleOrderLine(models.Model):
         lines.append("")
         lines.append("═══ SOUHRN ═══")
         lines.append(f"  Tier:    {result.get('tier_name', '?')}")
+        profile_name = result.get("profile_name")
+        if profile_name:
+            lines.append(f"  Profil:  {profile_name}")
         lines.append(f"  Marže:   {result.get('margin_pct', 0):.0f}%")
-        lines.append(
-            f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks"
-        )
+        lines.append(f"  Náklad:  {result.get('material_cost_only', 0):.4f} Kč/ks")
         lines.append(f"  ─────────────────")
 
         unit_raw = result.get("unit_price_raw", 0)
         unit_final = result["unit_price"]
         if unit_raw and abs(unit_raw - unit_final) > 0.001:
             lines.append(f"  Před zaokr.: {unit_raw:.4f} Kč/ks")
-            lines.append(
-                f"  CENA:        {unit_final:.2f} Kč/ks (↑ 10 hal.)"
-            )
+            lines.append(f"  CENA:        {unit_final:.2f} Kč/ks (↑ 10 hal.)")
         else:
             lines.append(f"  CENA:    {unit_final:.2f} Kč/ks")
         lines.append(f"  CELKEM:  {result['total_price']:.2f} Kč")
@@ -533,11 +534,13 @@ class SaleOrderLine(models.Model):
         """Přenese kalkulační pole na fakturu."""
         vals = super()._prepare_invoice_line(**optional_values)
         if self.pricing_type == "calculator":
-            vals.update({
-                "label_material_id": self.label_material_id.id,
-                "label_width_mm": self.label_width_mm,
-                "label_height_mm": self.label_height_mm,
-                "label_material_cost_only": self.label_material_cost_only,
-                "label_price_breakdown": self.label_price_breakdown,
-            })
+            vals.update(
+                {
+                    "label_material_id": self.label_material_id.id,
+                    "label_width_mm": self.label_width_mm,
+                    "label_height_mm": self.label_height_mm,
+                    "label_material_cost_only": self.label_material_cost_only,
+                    "label_price_breakdown": self.label_price_breakdown,
+                }
+            )
         return vals

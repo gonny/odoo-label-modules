@@ -97,6 +97,15 @@
         </page>
       </xpath>
 
+      <!-- ============================================ -->
+      <!-- VIP cenový profil zákazníka badge            -->
+      <!-- ============================================ -->
+      <xpath expr="//field[@name='partner_id']" position="after">
+        <field name="label_pricing_profile_id" readonly="1"
+               invisible="not label_pricing_profile_id"
+               widget="badge"/>
+      </xpath>
+
     </field>
   </record>
 

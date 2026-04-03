@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 
 
 class LabelMaterial(models.Model):
@@ -127,7 +127,8 @@ class LabelMaterial(models.Model):
 
     # === Tier overrides ===
     tier_override_ids = fields.One2many(
-        "label.material.tier.override", "material_id",
+        "label.material.tier.override",
+        "material_id",
         string="Přetížení hladin",
     )
 
@@ -140,7 +141,6 @@ class LabelMaterial(models.Model):
                 vat = mat.purchase_vat_pct or 0
                 mat.purchase_price_incl_vat = mat.purchase_price * (1 + vat / 100)
 
-
     @api.depends("purchase_price", "purchase_vat_included", "purchase_vat_pct")
     def _compute_vat_prices(self):
         for mat in self:
@@ -148,7 +148,9 @@ class LabelMaterial(models.Model):
             if mat.purchase_vat_included:
                 mat.purchase_price_incl_vat = mat.purchase_price
                 mat.purchase_price_excl_vat = (
-                    mat.purchase_price / (1 + vat_rate) if vat_rate else mat.purchase_price
+                    mat.purchase_price / (1 + vat_rate)
+                    if vat_rate
+                    else mat.purchase_price
                 )
             else:
                 mat.purchase_price_excl_vat = mat.purchase_price
@@ -157,8 +159,10 @@ class LabelMaterial(models.Model):
     @api.depends(
         "material_type",
         "purchase_price_incl_vat",
-        "sheet_width_mm", "sheet_height_mm",
-        "roll_width_mm", "roll_length_m",
+        "sheet_width_mm",
+        "sheet_height_mm",
+        "roll_width_mm",
+        "roll_length_m",
         "group_id.machine_id",
         "group_id.machine_id.hourly_amortization",
     )
@@ -190,7 +194,7 @@ class LabelMaterial(models.Model):
 
     def get_unit_cost(self, width_mm=0, height_mm=0):
         """Vrátí cenu za 1 ks materiálu VŽDY S DPH.
-        
+
         Používá purchase_price_incl_vat – dopočítanou cenu s DPH.
         """
         self.ensure_one()

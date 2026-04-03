@@ -9,8 +9,12 @@ flowchart TD
     SELECT_MATERIAL --> ENTER_DIMS[Zadej rozměry - šířka × výška/délka]
     ENTER_DIMS --> ENTER_QTY[Zadej množství]
 
-    ENTER_QTY --> FIND_TIER[Najdi tier dle množství + skupiny]
-    FIND_TIER --> CHECK_OVERRIDE{Existuje tier override pro tento materiál?}
+    ENTER_QTY --> GET_PROFILE[Načti cenový profil zákazníka\nStandard / VIP1 / VIP2]
+    GET_PROFILE --> FIND_TIER[Najdi tier dle množství + skupiny + profilu]
+    FIND_TIER --> CHECK_VIP_TIER{Tier nalezen pro profil?}
+    CHECK_VIP_TIER -->|ne| FALLBACK_TIER[Fallback na Standard tier]
+    CHECK_VIP_TIER -->|ano| CHECK_OVERRIDE{Existuje tier override pro tento materiál?}
+    FALLBACK_TIER --> CHECK_OVERRIDE
     CHECK_OVERRIDE -->|ano| USE_OVERRIDE[Použij přetížený výkon]
     CHECK_OVERRIDE -->|ne| USE_TIER[Použij výkon z tieru]
 

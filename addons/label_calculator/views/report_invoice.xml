@@ -9,9 +9,17 @@
        - QR code: SPD format for CZK, EPC format for EUR
        ============================================================ -->
 
-  <template id="report_invoice_label"
-            inherit_id="account.report_invoice_document"
-            priority="99">
+  <template id="report_invoice_label" inherit_id="account.report_invoice_document" priority="99">
+
+    <!-- VIP profile badge – shown for invoices where the partner has an active VIP pricing profile -->
+    <xpath expr="//div[@id='informations']" position="inside">
+      <div t-if="o.partner_id.label_pricing_profile_id.is_vip" class="col-auto col-3 mw-100 mb-2">
+        <strong>Cenový profil:</strong>
+        <p class="m-0">
+          <span t-out="o.partner_id.label_pricing_profile_id.name"/>
+        </p>
+      </div>
+    </xpath>
 
     <!-- Variable symbol – shown after payment reference in informations block -->
     <xpath expr="//div[@id='informations']" position="inside">
@@ -26,9 +34,7 @@
       <t t-set="qr_data" t-value="o._get_qr_code_base64()"/>
       <div t-if="qr_data" class="row mt-3 mb-3">
         <div class="col-3 text-center">
-          <img t-att-src="'data:image/png;base64,' + qr_data"
-               style="width:150px;height:150px;"
-               alt="QR payment"/>
+          <img t-att-src="'data:image/png;base64,' + qr_data" style="width:150px;height:150px;" alt="QR payment"/>
           <p t-if="o.currency_id.name == 'CZK'" class="small mt-1 mb-0">
             <strong>QR platba</strong>
           </p>

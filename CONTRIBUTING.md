@@ -52,6 +52,7 @@ After `make reset`, Odoo should show:
 | `make test`     | Run all Odoo unit tests (`--test-tags /label_calculator`)|
 | `make seed`     | Update module without dropping DB (re-seed `noupdate=0`) |
 | `make shell`    | Open interactive Odoo Python shell                       |
+| `make quality`  | Run code linters                          |
 | `make logs`     | Tail Odoo container logs                                 |
 | `make smoke`    | Run XML-RPC end-to-end smoke test                        |
 | `make build`    | Rebuild containers from scratch                          |

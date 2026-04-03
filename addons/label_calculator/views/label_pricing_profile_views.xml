@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+  <record id="label_pricing_profile_action" model="ir.actions.act_window">
+    <field name="name">Cenové profily</field>
+    <field name="res_model">label.pricing.profile</field>
+    <field name="view_mode">list,form</field>
+  </record>
+
+  <record id="view_label_pricing_profile_list" model="ir.ui.view">
+    <field name="name">label.pricing.profile.list</field>
+    <field name="model">label.pricing.profile</field>
+    <field name="arch" type="xml">
+      <list string="Cenové profily">
+        <field name="sequence" widget="handle"/>
+        <field name="name"/>
+        <field name="code"/>
+        <field name="is_default"/>
+        <field name="is_vip"/>
+        <field name="tier_count"/>
+        <field name="active"/>
+      </list>
+    </field>
+  </record>
+
+  <record id="view_label_pricing_profile_form" model="ir.ui.view">
+    <field name="name">label.pricing.profile.form</field>
+    <field name="model">label.pricing.profile</field>
+    <field name="arch" type="xml">
+      <form string="Cenový profil">
+        <sheet>
+          <group>
+            <group>
+              <field name="name"/>
+              <field name="code"/>
+              <field name="sequence"/>
+            </group>
+            <group>
+              <field name="is_default"/>
+              <field name="is_vip"/>
+              <field name="active"/>
+            </group>
+          </group>
+          <group string="Popis">
+            <field name="description" nolabel="1"/>
+          </group>
+          <notebook>
+            <page string="Výrobní hladiny" name="tiers">
+              <field name="tier_ids">
+                <list>
+                  <field name="name"/>
+                  <field name="group_id"/>
+                  <field name="min_quantity"/>
+                  <field name="max_quantity"/>
+                  <field name="pieces_per_hour"/>
+                  <field name="margin_pct"/>
+                </list>
+              </field>
+            </page>
+          </notebook>
+        </sheet>
+      </form>
+    </field>
+  </record>
+
+</odoo>

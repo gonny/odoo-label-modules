@@ -11,6 +11,7 @@
             <group string="Hladina">
               <field name="group_id"/>
               <field name="name"/>
+              <field name="pricing_profile_id"/>
               <field name="min_quantity"/>
               <field name="max_quantity"/>
             </group>
@@ -59,6 +60,7 @@
       <list>
         <field name="group_id"/>
         <field name="name"/>
+        <field name="pricing_profile_id"/>
         <field name="min_quantity"/>
         <field name="max_quantity"/>
         <field name="pieces_per_hour" decoration-bf="1"/>

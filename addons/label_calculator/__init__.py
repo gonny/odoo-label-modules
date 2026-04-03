@@ -10,12 +10,19 @@ def _post_init_configure(env):
 
     # ── Phase 1: Disable default sale tax (non-VAT-payer) ──
     env["ir.config_parameter"].sudo().set_param(
-        "account.default_sale_tax_id", False,
+        "account.default_sale_tax_id",
+        False,
     )
-    sale_taxes = env["account.tax"].sudo().search([
-        ("type_tax_use", "=", "sale"),
-        ("active", "=", True),
-    ])
+    sale_taxes = (
+        env["account.tax"]
+        .sudo()
+        .search(
+            [
+                ("type_tax_use", "=", "sale"),
+                ("active", "=", True),
+            ]
+        )
+    )
     if sale_taxes:
         sale_taxes.write({"active": False})
 
@@ -32,16 +39,25 @@ def _post_init_configure(env):
     if eur:
         eur.sudo().write({"active": True})
         # Set EUR rate: 1 EUR = 24 CZK → Odoo rate = 1/24
-        existing_rate = env["res.currency.rate"].sudo().search([
-            ("currency_id", "=", eur.id),
-        ], limit=1)
+        existing_rate = (
+            env["res.currency.rate"]
+            .sudo()
+            .search(
+                [
+                    ("currency_id", "=", eur.id),
+                ],
+                limit=1,
+            )
+        )
         if existing_rate:
             existing_rate.write({"rate": round(1 / 24, 6)})
         else:
-            env["res.currency.rate"].sudo().create({
-                "currency_id": eur.id,
-                "rate": round(1 / 24, 6),
-            })
+            env["res.currency.rate"].sudo().create(
+                {
+                    "currency_id": eur.id,
+                    "rate": round(1 / 24, 6),
+                }
+            )
 
     usd = env.ref("base.USD", raise_if_not_found=False)
     if usd and usd.active:
@@ -54,15 +70,26 @@ def _post_init_configure(env):
 
     # ── Phase 4: Enable cash rounding ──
     env["ir.config_parameter"].sudo().set_param(
-        "account.use_invoice_cash_rounding", "True",
+        "account.use_invoice_cash_rounding",
+        "True",
     )
 
     # ── Phase 5: Set rounding accounts ──
-    income_account = env["account.account"].sudo().search(
-        [("account_type", "=", "income")], limit=1,
+    income_account = (
+        env["account.account"]
+        .sudo()
+        .search(
+            [("account_type", "=", "income")],
+            limit=1,
+        )
     )
-    expense_account = env["account.account"].sudo().search(
-        [("account_type", "=", "expense")], limit=1,
+    expense_account = (
+        env["account.account"]
+        .sudo()
+        .search(
+            [("account_type", "=", "expense")],
+            limit=1,
+        )
     )
     if income_account and expense_account:
         roundings = env["account.cash.rounding"].sudo().search([])
@@ -78,15 +105,17 @@ def _post_init_configure(env):
     # ── Phase 6: Set company info (DEV environment) ──
     company = env.company.sudo()
     company_partner = company.partner_id.sudo()
-    company_partner.write({
-        "name": "Etiketou",
-        "street": "Dandova 1226",
-        "city": "Praha",
-        "zip": "19000",
-        "country_id": env.ref("base.cz").id,
-        "phone": "777123123",
-        "email": "info@etiketou.com",
-    })
+    company_partner.write(
+        {
+            "name": "Etiketou",
+            "street": "Dandova 1226",
+            "city": "Praha",
+            "zip": "19000",
+            "country_id": env.ref("base.cz").id,
+            "phone": "777123123",
+            "email": "info@etiketou.com",
+        }
+    )
 
     # ── Phase 7: Enable delivery/invoice addresses on sale orders ──
     group = env.ref("account.group_delivery_invoice_address", raise_if_not_found=False)

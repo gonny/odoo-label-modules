@@ -1,5 +1,6 @@
-from odoo import models, fields, api
 from datetime import timedelta
+
+from odoo import api, fields, models
 
 
 class SaleOrder(models.Model):
@@ -9,6 +10,14 @@ class SaleOrder(models.Model):
         "sale.order.line",
         compute="_compute_partner_history",
         string="Historie štítků zákazníka",
+    )
+
+    label_pricing_profile_id = fields.Many2one(
+        "label.pricing.profile",
+        string="Cenový profil zákazníka",
+        related="partner_id.label_pricing_profile_id",
+        store=False,
+        readonly=True,
     )
 
     @api.depends("partner_id")
@@ -53,9 +62,7 @@ class SaleOrder(models.Model):
             "res_model": "sale.order.line",
             "view_mode": "list",
             "views": [
-                (self.env.ref(
-                    "label_calculator.view_label_history_list"
-                ).id, "list"),
+                (self.env.ref("label_calculator.view_label_history_list").id, "list"),
             ],
             "domain": domain,
             "context": {

@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 
 
 class LabelMaterialGroup(models.Model):
@@ -26,29 +26,33 @@ class LabelMaterialGroup(models.Model):
         string="Příplatkový materiál",
         default=False,
         help="True = přidává se k hlavnímu materiálu. "
-             "Nepočítá se práce ani admin – jen materiálové náklady "
-             "(a amortizace stroje, pokud je přiřazen).",
+        "Nepočítá se práce ani admin – jen materiálové náklady "
+        "(a amortizace stroje, pokud je přiřazen).",
     )
 
     default_margin_pct = fields.Float(
         string="Výchozí marže (%)",
         digits=(5, 2),
         help="Fallback marže, pokud tier nemá vlastní. "
-             "Pokud 0, použije se globální nastavení.",
+        "Pokud 0, použije se globální nastavení.",
     )
 
     machine_id = fields.Many2one(
         "label.machine",
         string="Stroj",
         help="Stroj používaný pro výrobu z tohoto materiálu. "
-             "Amortizace se zahrne do kalkulace.",
+        "Amortizace se zahrne do kalkulace.",
     )
 
     material_ids = fields.One2many(
-        "label.material", "group_id", string="Materiály",
+        "label.material",
+        "group_id",
+        string="Materiály",
     )
     tier_ids = fields.One2many(
-        "label.production.tier", "group_id", string="Množstevní hladiny",
+        "label.production.tier",
+        "group_id",
+        string="Množstevní hladiny",
     )
 
     material_count = fields.Integer(

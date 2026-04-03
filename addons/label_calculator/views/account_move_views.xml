@@ -11,7 +11,12 @@
       <xpath expr="//field[@name='payment_reference']" position="after">
         <field name="label_variable_symbol" string="Variabilní symbol" readonly="1"/>
       </xpath>
-
+      <!-- VIP zákazník: zobrazení cenové úrovně vedle jména zákazníka -->
+      <xpath expr="//field[@name='partner_id']" position="after">
+        <div invisible="not partner_id.label_is_vip" class="text-success fw-bold">
+    ⭐          <field name="label_pricing_profile_display" readonly="1" nolabel="1" class="d-inline"/>
+        </div>
+      </xpath>
       <!-- Přidat kalkulační sloupce do řádků faktury -->
       <xpath expr="//field[@name='invoice_line_ids']/list/field[@name='price_unit']" position="before">
         <field name="label_material_id" string="Varianta" optional="hide"/>

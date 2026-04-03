@@ -1,4 +1,4 @@
-from odoo import models, fields, api
+from odoo import api, fields, models
 
 
 class LabelMachine(models.Model):
@@ -66,8 +66,11 @@ class LabelMachine(models.Model):
     notes = fields.Text(string="Poznámky")
 
     @api.depends(
-        "purchase_price", "lifetime_years",
-        "working_days_per_week", "hours_per_day", "weeks_per_year",
+        "purchase_price",
+        "lifetime_years",
+        "working_days_per_week",
+        "hours_per_day",
+        "weeks_per_year",
     )
     def _compute_amortization(self):
         for m in self:

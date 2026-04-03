@@ -105,11 +105,6 @@ As you're working in a local Docker environment, here are some useful commands f
   --stop-after-init \
   --log-level=info`
 
-- `docker compose run --rm odoo odoo`: Main Odoo command-line tool
-- `docker compose exec odoo odoo -u <module_name>`: Update a specific module
-- `docker compose exec odoo odoo -i <module_name>`: Install a module
-- `docker compose exec odoo odoo --test-enable`: Run tests
-- `docker compose exec odoo odoo --dev=all`: Enable development mode with auto-reload
 
 ## Resources
 

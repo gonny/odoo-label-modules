@@ -1,8 +1,9 @@
-from odoo import models, fields, api
 import base64
 import io
-import re
 import logging
+import re
+
+from odoo import api, fields, models
 
 _logger = logging.getLogger(__name__)
 
@@ -16,6 +17,22 @@ class AccountMove(models.Model):
         compute="_compute_variable_symbol",
         store=True,
     )
+
+    # Pole pro zobrazení cenového profilu vedle jména zákazníka (pro VIP / Standard)
+    label_pricing_profile_display = fields.Char(
+        compute="_compute_label_pricing_profile_display",
+        store=False,
+    )
+
+    @api.depends("partner_id.label_pricing_profile_id")
+    def _compute_label_pricing_profile_display(self):
+        """Zobrazí název VIP cenového profilu vedle jména zákazníka, pokud je zákazník VIP."""
+        for move in self:
+            profile = move.partner_id.label_pricing_profile_id
+            if profile and profile.is_vip:
+                move.label_pricing_profile_display = profile.name
+            else:
+                move.label_pricing_profile_display = ""
 
     @api.depends("name")
     def _compute_variable_symbol(self):
@@ -63,10 +80,7 @@ class AccountMove(models.Model):
                 company_partner = self.env.company.partner_id
                 bank = company_partner.bank_ids.filtered(
                     lambda b: b.currency_id == currency
-                    or (
-                        not b.currency_id
-                        and currency == self.env.company.currency_id
-                    )
+                    or (not b.currency_id and currency == self.env.company.currency_id)
                 )[:1]
                 if not bank:
                     bank = company_partner.bank_ids[:1]
@@ -147,17 +161,17 @@ class AccountMove(models.Model):
 
         # EPC QR format (newline-separated)
         lines = [
-            "BCD",       # Service Tag
-            "002",       # Version
-            "1",         # Character set (UTF-8)
-            "SCT",       # Identification code
-            bic,         # BIC of beneficiary bank (may be empty)
-            beneficiary, # Beneficiary name
-            iban,        # IBAN
-            amount,      # Amount (EUR + value)
-            "",          # Purpose (empty)
-            "",          # Remittance reference (empty)
-            msg,         # Remittance text
+            "BCD",  # Service Tag
+            "002",  # Version
+            "1",  # Character set (UTF-8)
+            "SCT",  # Identification code
+            bic,  # BIC of beneficiary bank (may be empty)
+            beneficiary,  # Beneficiary name
+            iban,  # IBAN
+            amount,  # Amount (EUR + value)
+            "",  # Purpose (empty)
+            "",  # Remittance reference (empty)
+            msg,  # Remittance text
         ]
         return "\n".join(lines)
 
