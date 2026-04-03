@@ -17,7 +17,6 @@ import sys
 import time
 import xmlrpc.client
 
-
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
@@ -33,8 +32,9 @@ ODOO_PASSWORD = os.environ.get("ODOO_PASSWORD", "admin")
 class OdooRPC:
     """Thin wrapper around Odoo's XML-RPC interface."""
 
-    def __init__(self, url=ODOO_URL, db=ODOO_DB, user=ODOO_USER,
-                 password=ODOO_PASSWORD):
+    def __init__(
+        self, url=ODOO_URL, db=ODOO_DB, user=ODOO_USER, password=ODOO_PASSWORD
+    ):
         self.url = url.rstrip("/")
         self.db = db
         self.user = user
@@ -47,17 +47,22 @@ class OdooRPC:
     def connect(self, retries=12, delay=5):
         """Authenticate and return *uid*.  Retries on connection errors."""
         self._common = xmlrpc.client.ServerProxy(
-            f"{self.url}/xmlrpc/2/common", allow_none=True,
+            f"{self.url}/xmlrpc/2/common",
+            allow_none=True,
         )
         self._object = xmlrpc.client.ServerProxy(
-            f"{self.url}/xmlrpc/2/object", allow_none=True,
+            f"{self.url}/xmlrpc/2/object",
+            allow_none=True,
         )
 
         last_err: Exception = RuntimeError("Connection failed")
         for attempt in range(1, retries + 1):
             try:
                 self.uid = self._common.authenticate(
-                    self.db, self.user, self.password, {},
+                    self.db,
+                    self.user,
+                    self.password,
+                    {},
                 )
                 if self.uid:
                     return self.uid
@@ -67,8 +72,7 @@ class OdooRPC:
             except (ConnectionRefusedError, OSError, xmlrpc.client.Fault) as exc:
                 last_err = exc
             print(
-                f"  [attempt {attempt}/{retries}] waiting for Odoo … "
-                f"({last_err})",
+                f"  [attempt {attempt}/{retries}] waiting for Odoo … " f"({last_err})",
                 file=sys.stderr,
             )
             time.sleep(delay)
@@ -80,8 +84,13 @@ class OdooRPC:
         if self.uid is None:
             raise RuntimeError("Not connected – call connect() first")
         return self._object.execute_kw(
-            self.db, self.uid, self.password,
-            model, method, list(args), kwargs,
+            self.db,
+            self.uid,
+            self.password,
+            model,
+            method,
+            list(args),
+            kwargs,
         )
 
     def search(self, model, domain, **kw):
@@ -91,8 +100,13 @@ class OdooRPC:
         if self.uid is None:
             raise RuntimeError("Not connected")
         return self._object.execute_kw(
-            self.db, self.uid, self.password,
-            model, "read", [ids], {"fields": fields or []},
+            self.db,
+            self.uid,
+            self.password,
+            model,
+            "read",
+            [ids],
+            {"fields": fields or []},
         )
 
     def search_read(self, model, domain, fields=None, **kw):
@@ -151,13 +165,18 @@ class OdooRPC:
 
         Returns the invoice (account.move) id, or None if not found.
         """
-        wizard_id = self.create("sale.advance.payment.inv", {
-            "advance_payment_method": "delivered",
-            "sale_order_ids": [(6, 0, [order_id])],
-        })
+        wizard_id = self.create(
+            "sale.advance.payment.inv",
+            {
+                "advance_payment_method": "delivered",
+                "sale_order_ids": [(6, 0, [order_id])],
+            },
+        )
         try:
             self.execute(
-                "sale.advance.payment.inv", "create_invoices", [wizard_id],
+                "sale.advance.payment.inv",
+                "create_invoices",
+                [wizard_id],
             )
         except xmlrpc.client.Fault as exc:
             # The action dict returned by create_invoices may contain None
@@ -175,11 +194,18 @@ class OdooRPC:
     def read_invoice(self, invoice_id, fields=None):
         """Read invoice fields."""
         default_fields = [
-            "name", "state", "amount_total", "amount_residual",
-            "label_variable_symbol", "partner_id", "currency_id",
+            "name",
+            "state",
+            "amount_total",
+            "amount_residual",
+            "label_variable_symbol",
+            "partner_id",
+            "currency_id",
         ]
         return self.read(
-            "account.move", [invoice_id], fields or default_fields,
+            "account.move",
+            [invoice_id],
+            fields or default_fields,
         )
 
 
@@ -203,18 +229,20 @@ def _demo():
         partner_id = partners[0]["id"]
         print(f"Using existing partner id={partner_id}")
     else:
-        partner_id = rpc.create("res.partner", {
-            "name": "RPC Test Customer",
-            "email": "rpc-test@example.com",
-        })
+        partner_id = rpc.create(
+            "res.partner",
+            {
+                "name": "RPC Test Customer",
+                "email": "rpc-test@example.com",
+            },
+        )
         print(f"Created partner id={partner_id}")
 
     # 2. Find a calculator product
     products = rpc.search_read(
         "product.template",
         [("pricing_type", "=", "calculator")],
-        ["id", "name", "label_material_group_id",
-         "label_default_material_id"],
+        ["id", "name", "label_material_group_id", "label_default_material_id"],
         limit=1,
     )
     if not products:
@@ -229,35 +257,51 @@ def _demo():
     )
     product_id = product_ids[0]
     mat_id = tmpl["label_default_material_id"][0]
-    print(f"Product: {tmpl['name']} (id={tmpl['id']}, "
-          f"variant={product_id}, material={mat_id})")
+    print(
+        f"Product: {tmpl['name']} (id={tmpl['id']}, "
+        f"variant={product_id}, material={mat_id})"
+    )
 
     # 3. Create a sale order
-    order_id = rpc.create_sale_order(partner_id, lines=[{
-        "product_id": product_id,
-        "product_template_id": tmpl["id"],
-        "label_material_id": mat_id,
-        "label_width_mm": 30,
-        "label_height_mm": 40,
-        "product_uom_qty": 100,
-    }])
-    order = rpc.read("sale.order", [order_id],
-                     ["name", "state", "amount_total"])[0]
-    print(f"\nCreated sale order {order['name']} "
-          f"(id={order_id}, total={order['amount_total']})")
+    order_id = rpc.create_sale_order(
+        partner_id,
+        lines=[
+            {
+                "product_id": product_id,
+                "product_template_id": tmpl["id"],
+                "label_material_id": mat_id,
+                "label_width_mm": 30,
+                "label_height_mm": 40,
+                "product_uom_qty": 100,
+            }
+        ],
+    )
+    order = rpc.read("sale.order", [order_id], ["name", "state", "amount_total"])[0]
+    print(
+        f"\nCreated sale order {order['name']} "
+        f"(id={order_id}, total={order['amount_total']})"
+    )
 
     # 4. Read order lines with breakdown
-    sol_ids = rpc.search("sale.order.line",
-                         [("order_id", "=", order_id)])
-    lines = rpc.read("sale.order.line", sol_ids, [
-        "name", "product_uom_qty", "price_unit",
-        "label_calculated_price", "label_material_cost_only",
-        "label_price_breakdown",
-    ])
+    sol_ids = rpc.search("sale.order.line", [("order_id", "=", order_id)])
+    lines = rpc.read(
+        "sale.order.line",
+        sol_ids,
+        [
+            "name",
+            "product_uom_qty",
+            "price_unit",
+            "label_calculated_price",
+            "label_material_cost_only",
+            "label_price_breakdown",
+        ],
+    )
     for ln in lines:
-        print(f"  Line: qty={ln['product_uom_qty']} "
-              f"price={ln['price_unit']} "
-              f"calc={ln['label_calculated_price']}")
+        print(
+            f"  Line: qty={ln['product_uom_qty']} "
+            f"price={ln['price_unit']} "
+            f"calc={ln['label_calculated_price']}"
+        )
 
     # 5. Confirm order
     rpc.confirm_sale_order(order_id)
@@ -268,9 +312,11 @@ def _demo():
     inv_id = rpc.create_invoice_from_sale(order_id)
     if inv_id:
         inv = rpc.read_invoice(inv_id)[0]
-        print(f"\nInvoice: {inv['name']}  "
-              f"total={inv['amount_total']}  "
-              f"VS={inv.get('label_variable_symbol', 'N/A')}")
+        print(
+            f"\nInvoice: {inv['name']}  "
+            f"total={inv['amount_total']}  "
+            f"VS={inv.get('label_variable_symbol', 'N/A')}"
+        )
     else:
         print("\nNo invoice created (may need manual invoicing).")
 

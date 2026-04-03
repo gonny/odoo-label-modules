@@ -1,9 +1,9 @@
 {
-    'name': 'Example Label Module',
-    'version': '19.0.1.0.0',
-    'category': 'Inventory',
-    'summary': 'Example module for label management',
-    'description': """
+    "name": "Example Label Module",
+    "version": "19.0.1.0.0",
+    "category": "Inventory",
+    "summary": "Example module for label management",
+    "description": """
         Example Label Module
         ====================
         
@@ -16,20 +16,20 @@
         * Label printing
         * Label templates
     """,
-    'author': 'Your Company',
-    'website': 'https://www.yourcompany.com',
-    'license': 'LGPL-3',
-    'depends': [
-        'base',
-        'stock',
+    "author": "Your Company",
+    "website": "https://www.yourcompany.com",
+    "license": "LGPL-3",
+    "depends": [
+        "base",
+        "stock",
     ],
-    'data': [
-        'security/ir.model.access.csv',
-        'views/label_views.xml',
-        'views/menu_views.xml',
+    "data": [
+        "security/ir.model.access.csv",
+        "views/label_views.xml",
+        "views/menu_views.xml",
     ],
-    'demo': [],
-    'installable': True,
-    'application': False,
-    'auto_install': False,
+    "demo": [],
+    "installable": True,
+    "application": False,
+    "auto_install": False,
 }
