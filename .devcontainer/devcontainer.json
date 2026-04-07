@@ -10,7 +10,8 @@
       "enableNonRootDocker": "true",
       "moby": "true"
     },
-    "ghcr.io/devcontainers/features/node": {}
+    "ghcr.io/devcontainers/features/node": {},
+    "ghcr.io/devcontainers/features/terraform": {}
   },
   "customizations": {
     "vscode": {

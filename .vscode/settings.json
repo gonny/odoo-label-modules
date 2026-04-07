@@ -1,7 +1,8 @@
 {
   "chat.tools.terminal.autoApprove": {
     "docker compose": true,
-    "make": true
+    "make": true,
+    "terraform": true
   },
   "editor.formatOnSave": false
 }
