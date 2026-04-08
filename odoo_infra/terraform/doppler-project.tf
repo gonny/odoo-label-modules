@@ -68,6 +68,7 @@ resource "random_password" "project_secrets" {
 
   length  = 32
   special = true
+  override_special = "-_." # Avoid characters that might cause issues in certain contexts (e.g., URLs, config files)
 }
 
 locals {
@@ -101,7 +102,9 @@ locals {
         POSTGRES_PASSWORD = {}
         ODOO_DB_PASSWORD  = {}
         N8N_DB_PASSWORD   = {}
-        PGADMIN_EMAIL     = {}
+        PGADMIN_EMAIL     = {
+          value = "snobljan@gmail.com"
+        }
         PGADMIN_PASSWORD  = {}
       }
       business = {

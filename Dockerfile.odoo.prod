@@ -5,7 +5,8 @@ USER root
 RUN pip3 install --break-system-packages --no-cache-dir \
     qifparse \
     qrcode[pil]
-
+    
+# Bundle addons in the image
 COPY addons/ /mnt/extra-addons/
 
 USER odoo

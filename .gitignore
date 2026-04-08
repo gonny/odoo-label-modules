@@ -7,3 +7,5 @@ __pycache__/
 *.swp
 node_modules/
 addons/muk*
+odoo_infra/terraform/.terraform*
+odoo_infra/terraform/terraform.tfstate*
