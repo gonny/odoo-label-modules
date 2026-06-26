@@ -10,7 +10,7 @@ isort>=5.13.0
 # Testing
 pytest>=8.0.0
 pytest-cov>=4.1.0
-coverage>=7.4.0
+coverage>=7.13.5
 
 # Documentation
 sphinx>=7.2.0
